@@ -1,0 +1,6 @@
+<services autodetect="false">
+	<request priority="1">csnd:SND</request>
+</services>
+<targets selectable="false">
+  <title mediatype="1">000400000015fa00</title>
+</targets>

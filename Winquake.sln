@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "winquake", "Winquake.vcxproj", "{006F17EF-4968-4900-AC05-7636942AAC03}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		3ds|x86 = 3ds|x86
+		Debug|x86 = Debug|x86
+		GL Debug|x86 = GL Debug|x86
+		GL Release PR|x86 = GL Release PR|x86
+		GL Release|x86 = GL Release|x86
+		Release PR|x86 = Release PR|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{006F17EF-4968-4900-AC05-7636942AAC03}.3ds|x86.ActiveCfg = 3ds|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.3ds|x86.Build.0 = 3ds|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.Debug|x86.ActiveCfg = Debug|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.Debug|x86.Build.0 = Debug|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.GL Debug|x86.ActiveCfg = GL Debug|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.GL Debug|x86.Build.0 = GL Debug|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.GL Release PR|x86.ActiveCfg = GL Release PR|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.GL Release PR|x86.Build.0 = GL Release PR|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.GL Release|x86.ActiveCfg = GL Release|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.GL Release|x86.Build.0 = GL Release|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.Release PR|x86.ActiveCfg = Release PR|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.Release PR|x86.Build.0 = Release PR|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.Release|x86.ActiveCfg = Release|Win32
+		{006F17EF-4968-4900-AC05-7636942AAC03}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
