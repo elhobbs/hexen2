@@ -47,16 +47,16 @@ static void myGPU_SetTexture(GPU_TEXUNIT unit, u32 data, u16 width, u16 height, 
 	DBGPRINT("set: %d %d %d %d %08x %08x\n", ctr_state.client_texture_current, iwidth, iheight, icolor, data, data >> 3);
 	//svcSleepThread(1000000000);
 #ifdef _3DS
-	GPU_SetTexEnv(0,
-		GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR), // RGB channels
-		GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR), // Alpha
-		GPU_TEVOPERANDS(0, 0, 0), // RGB
-		GPU_TEVOPERANDS(0, 0, 0), // Alpha
-		GPU_MODULATE, GPU_MODULATE, // RGB, Alpha
-		0xFFFFFFFF);
 	switch (unit)
 	{
 	case GPU_TEXUNIT0:
+		/*GPU_SetTexEnv(0,
+			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
+			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
+			GPU_TEVOPERANDS(0, 0, 0),
+			GPU_TEVOPERANDS(0, 0, 0),
+			GPU_MODULATE, GPU_MODULATE,
+			0xFFFFFFFF);*/
 		GPUCMD_AddWrite(GPUREG_TEXUNIT0_TYPE, icolor);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT0_ADDR1, (data) >> 3);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT0_DIM, (iwidth << 16) | iheight);
@@ -64,6 +64,13 @@ static void myGPU_SetTexture(GPU_TEXUNIT unit, u32 data, u16 width, u16 height, 
 		break;
 
 	case GPU_TEXUNIT1:
+		/*GPU_SetTexEnv(0,
+			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_TEXTURE1, GPU_PRIMARY_COLOR),
+			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
+			GPU_TEVOPERANDS(0, GPU_TEVOP_RGB_ONE_MINUS_SRC_ALPHA, 0),
+			GPU_TEVOPERANDS(0, 0, 0),
+			GPU_MODULATE, GPU_MODULATE,
+			0xFFFFFFFF);*/
 		GPUCMD_AddWrite(GPUREG_TEXUNIT1_TYPE, icolor);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT1_ADDR, (data) >> 3);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT1_DIM, (iwidth << 16) | iheight);
@@ -79,9 +86,29 @@ static void myGPU_SetTexture(GPU_TEXUNIT unit, u32 data, u16 width, u16 height, 
 	}
 #endif
 }
+
+void waitforitgl(char *text) {
+#if 1
+	printf(text);
+	printf("\npress A...");
+	do {
+		scanKeys();
+		gspWaitForEvent(GSPGPU_EVENT_VBlank0, false);
+	} while ((keysDown() & KEY_A) == 0);
+	do {
+		scanKeys();
+		gspWaitForEvent(GSPGPU_EVENT_VBlank0, false);
+	} while ((keysDown() & KEY_A) == KEY_A);
+	printf("done");
+	printf("\n");
+#endif
+}
+
+
 void glBindTexture(GLenum target, GLuint texture) {
-	DBGPRINT("bind texture: %08x\n", texture);
+	//printf("bind texture: %d %08x\n", ctr_state.client_texture_current, texture);
 	if (texture == 0) {
+		//printf("binding 0 texture\n");
 		ctr_state.bound_texture[ctr_state.client_texture_current] = 0;
 		return;
 	}
@@ -97,7 +124,7 @@ void glBindTexture(GLenum target, GLuint texture) {
 		ctr_handle_set(CTR_HANDLE_TEXTURE, texture, tx);
 	}
 	ctr_state.bound_texture[ctr_state.client_texture_current] = texture;
-#ifdef _3DS
+//#ifdef _3DS
 	if (tx->data) {
 		myGPU_SetTexture(
 			__tmu[ctr_state.client_texture_current],
@@ -108,7 +135,7 @@ void glBindTexture(GLenum target, GLuint texture) {
 			tx->format // Pixel format
 			);
 	}
-#endif
+//#endif
 }
 
 void glClientActiveTexture(GLenum texture) {
@@ -245,17 +272,19 @@ void copy_tex_rgba_5551(u32 *src, u16 *dst, int width, int height) {
 
 #endif // 0
 
+static u32 tex_image_alloc = 0;
+
 void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid * data) {
 	//TODO support mipmaps
 	if (level != 0) {
 		return;
 	}
+	//printf("glTexImage2D: %d %08x\n", ctr_state.client_texture_current, ctr_state.bound_texture[ctr_state.client_texture_current]);
 	DBGPRINT("bound texture: %d %08x\n", ctr_state.client_texture_current, ctr_state.bound_texture[ctr_state.client_texture_current]);
 	CTR_TEXTURE *tx = ctr_handle_get(CTR_HANDLE_TEXTURE, ctr_state.bound_texture[ctr_state.client_texture_current]);
 	if (target != GL_TEXTURE_2D || tx == 0) {
 		return;
 	}
-
 
 	//verify supported dimensions
 	if (!is_supported_size(width) || !is_supported_size(height)) {
@@ -273,11 +302,17 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 			_size = 3;
 			break;
 		case GL_RGBA:
-			_format = GPU_RGBA8;
-			_size = 4;
+			//_format = GPU_RGBA8;
+			//_size = 4;
+			_format = GPU_RGBA4;
+			_size = 2;
+			break;
+		case GL_ALPHA:
+			_format = GPU_A8;
+			_size = 1;
 			break;
 		case GL_LUMINANCE:
-			_format = GPU_L8;
+			_format = GPU_A8;
 			_size = 1;
 			break;
 		case GL_LUMINANCE_ALPHA:
@@ -308,6 +343,7 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 
 	//release the old buffer if it is different size
 	if (tx->data && (tx->size != _size)) {
+		tex_image_alloc -= _size;
 		linearFree(tx->data);
 		tx->data = 0;
 		tx->size = 0;
@@ -316,11 +352,18 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 
 	//create a new buffer if needed
 	if (tx->data == 0) {
+		printf("tx->data = linearMemAlign(%d)\n", _size);
+		printf("used: %d free: %d\n", tex_image_alloc, linearSpaceFree());
 		tx->data = (GLubyte *)linearMemAlign(_size, 0x80);
 		if (tx->data == 0) {
+			printf("glTexImage2D: failed to allocate %d\n", _size);
+			do {
+				svcSleepThread(1000000);
+			} while (1);
 			return;
 		}
 		tx->size = _size;
+		tex_image_alloc += _size;
 		DBGPRINT("===================\n  new buffer\n");
 	}
 	tx->width = width;
@@ -338,7 +381,8 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 			copy_tex_rgb_rgb(tx, data, width, height);
 			break;
 		case GL_RGBA:
-			copy_tex_rgba_rgba(tx, data, width, height);
+			//copy_tex_rgba_rgba(tx, data, width, height);
+			copy_tex_rgba_4444(tx, data, width, height);
 			break;
 		case GL_LUMINANCE:
 			copy_tex_8_8(tx, data, width, height);
@@ -355,11 +399,7 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 	case GL_UNSIGNED_SHORT_5_5_5_1:
 		break;
 	}
-	//copy data if provided
-	//if (data) {
-		//memcpy(tx->data, data, _size);
-		//tileImage32(data, tx->data, width, height);
-	//}
+
 #ifdef _3DS
 	myGPU_SetTexture(
 		__tmu[ctr_state.client_texture_current],
@@ -377,6 +417,7 @@ void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, G
 	if (level != 0) {
 		return;
 	}
+	//printf("glTexSubImage2D: %d %08x\n", ctr_state.client_texture_current, ctr_state.bound_texture[ctr_state.client_texture_current]);
 	DBGPRINT("bound texture: %d %08x\n", ctr_state.client_texture_current, ctr_state.bound_texture[ctr_state.client_texture_current]);
 	CTR_TEXTURE *tx = ctr_handle_get(CTR_HANDLE_TEXTURE, ctr_state.bound_texture[ctr_state.client_texture_current]);
 	if (target != GL_TEXTURE_2D || tx == 0) {
@@ -395,11 +436,13 @@ void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, G
 			_size = 3;
 			break;
 		case GL_RGBA:
-			_format = GPU_RGBA8;
-			_size = 4;
+			//_format = GPU_RGBA8;
+			//_size = 4;
+			_format = GPU_RGBA4;
+			_size = 2;
 			break;
 		case GL_LUMINANCE:
-			_format = GPU_L8;
+			_format = GPU_A8;//this is wrong - sb GPU_L8;
 			_size = 1;
 			break;
 		case GL_LUMINANCE_ALPHA:
@@ -434,7 +477,7 @@ void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, G
 			copy_tex_sub_rgb_rgb(tx, pixels, xoffset, yoffset, width, height);
 			break;
 		case GL_RGBA:
-			copy_tex_sub_rgba_rgba(tx, pixels, xoffset, yoffset, width, height);
+			copy_tex_sub_rgba_4444(tx, pixels, xoffset, yoffset, width, height);
 			break;
 		case GL_LUMINANCE:
 			copy_tex_sub_8_8(tx, pixels, xoffset, yoffset, width, height);

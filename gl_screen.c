@@ -1187,11 +1187,14 @@ void SCR_UpdateScreen (void)
 	{
 		waitforit("V_RenderView");
 		V_RenderView ();
+		//void ctr_draw_tex_all();
+		//ctr_draw_tex_all();
 	}
 
 	waitforit("GL_Set2D");
 	GL_Set2D ();
 
+#if 1
 	//
 	// draw any areas not covered by the refresh
 	//
@@ -1257,6 +1260,7 @@ void SCR_UpdateScreen (void)
 		waitforit("SCR_DrawLoading");
 		SCR_DrawLoading();
 	}
+#endif
 
 	waitforit("V_UpdatePalette");
 	V_UpdatePalette ();

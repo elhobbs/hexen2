@@ -22,6 +22,7 @@
 .alias innrm v1
 .alias inclr v2
 .alias intex v3
+.alias intex2 v4
 
 .proc main
 	; Force the w component of inpos to be 1.0
@@ -43,7 +44,7 @@
 
 	; outtex = intex
 	mov outtc0, intex
-	mov outtc1, intex
+	mov outtc1, intex2
 
 	mov outclr, inclr
 

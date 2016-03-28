@@ -61,7 +61,7 @@ float RTint[256], GTint[256], BTint[256];
 
 glvert_t glv;
 
-cvar_t	gl_ztrick = { "gl_ztrick","1",true };
+cvar_t	gl_ztrick = { "gl_ztrick","0",true };
 
 viddef_t	vid;				// global video state
 
@@ -198,16 +198,7 @@ int		texture_extension_number = 1;
 
 extern int ir_vbo;
 extern int ir_vbo_base_vertex;
-#define IR_MAX_VERTEX 32000
-
-#ifdef _3DS
-typedef struct {
-	float xyz[3];
-	float n[3];
-	float c[4];
-	float st[2];
-} ir_vert_t;
-#endif
+#define IR_MAX_VERTEX 64000
 
 /*
 ===============
@@ -220,13 +211,27 @@ void GL_Init(void)
 	is_PowerVR = true;
 	glEnable(GL_TEXTURE_2D);
 
-#ifdef _3DS
 	// Create the vbo
 	glGenBuffers(1, &ir_vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(ir_vert_t)*IR_MAX_VERTEX, 0, 0);// GL_STREAM_DRAW);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glClientActiveTexture(GL_TEXTURE1);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glClientActiveTexture(GL_TEXTURE0);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
+	glClientActiveTexture(GL_TEXTURE1);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 48);
+	glClientActiveTexture(GL_TEXTURE0);
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
 
 #if 0
 
@@ -263,6 +268,8 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 {
 	extern cvar_t gl_clear;
 
+	currenttexture = -1;
+
 	x_3ds = y_3ds = 0;
 
 	ir_vbo_base_vertex = 0;
@@ -273,6 +280,9 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 
 	gpuFrameBegin();
 	glViewport (*x, *y, *width, *height);
+
+	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
+
 }
 
 void keyboard_draw();
@@ -280,6 +290,7 @@ void keyboard_draw();
 
 void GL_EndRendering(void)
 {
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	//if (!scr_skipupdate)
 	//	SwapBuffers(maindc);
 	gpuFrameEnd();

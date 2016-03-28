@@ -13,6 +13,7 @@ CTR_CLIENT_STATE ctr_state;
 void ctr_rend_init() {
 	memset(&ctr_state, 0, sizeof(ctr_state));
 	ctr_state.dirty = 1;
+	ctr_state.dirty_matrix = 1;
 
 	//no bound textures
 	ctr_state.bound_texture[0] = 0;
@@ -22,6 +23,11 @@ void ctr_rend_init() {
 	//no buffers bound
 	ctr_state.bound_array_buffer = 0;
 	ctr_state.bound_element_array_buffer = 0;
+
+	//texenv
+	ctr_state.texenv_src_rgb0 = GPU_TEXTURE0;
+	ctr_state.texenv_src_alpha0 = GPU_TEXTURE0;
+	ctr_state.texenv_color = 0xFFFFFFFF; //white
 
 	ctr_rend_vao_init();
 
@@ -192,9 +198,7 @@ int ctr_is_aos(CTR_VAO *vao) {
 void ctr_set_attr_buffers(int element_count, GLint basevertex) {
 	DBGPRINT("ctr_state.bound_array_buffer == %08x\n", ctr_state.bound_array_buffer);
 	DBGPRINT("ctr_state.bound_vao == %08x\n", ctr_state.bound_vao);
-	//if (!ctr_state.dirty) {
-	//	return;
-	//}
+
 	u32 attr_frmt = 0;
 	int i;
 	u16 stride = 0;
@@ -238,7 +242,7 @@ void ctr_set_attr_buffers(int element_count, GLint basevertex) {
 		//HACK HACK HACK
 		stride = vao->attr[order[0]].stride;
 
-		buff_offs[0] = CTR_RENDER_OFFSET(buf->data) + ((u32)basevertex * (u32)stride);
+		buff_offs[0] = CTR_RENDER_OFFSET(buf->data) +((u32)basevertex * (u32)stride);
 		buff_attr[0] = num_attr;
 		buff_perm[0] = attr_perm;
 		buff_strd[0] = stride;
@@ -312,7 +316,7 @@ void ctr_set_attr_buffers(int element_count, GLint basevertex) {
 					buff_offs[i] = CTR_RENDER_OFFSET(data);
 					buff_strd[i] = calc_stride;
 
-					DBGPRINT("attr: %d %d\n", i, calc_stride);
+					printf("attr: %d %d\n", i, calc_stride);
 
 
 
@@ -350,17 +354,27 @@ void ctr_set_attr_buffers(int element_count, GLint basevertex) {
 	DBGPRINT("buff_offs:"); for (i = 0; i < num_buff; i++) DBGPRINT(" %d", buff_offs[i]); DBGPRINT("\n");
 	//while (1);
 
-	myGPU_SetAttributeBuffers(
-		num_attr, // Number of inputs per vertex
-		(u32*)osConvertVirtToPhys((u32)__ctru_linear_heap), // Location of the VBO
-		attr_frmt, // Format of the inputs
-		attr_mask, // Unused attribute mask, in our case bits 0~2 are cleared since they are used
-		attr_perm, // Attribute permutations (here it is the identity, passing each attribute in order)
-		num_buff, // Number of buffers
-		buff_offs, // Buffer offsets (placeholders)
-		buff_perm, // Attribute permutations for each buffer
-		buff_strd, // attribute strides for each buffer
-		buff_attr); // Number of attributes for each buffer
+	if (ctr_state.dirty == 0) {
+		for (i = 0; i < num_buff; i++) {
+			GPUCMD_AddWrite(GPUREG_ATTRIBBUFFER0_OFFSET + (i*3), buff_offs[i]);
+		}
+	}
+	else {
+
+		myGPU_SetAttributeBuffers(
+			num_attr, // Number of inputs per vertex
+			(u32*)osConvertVirtToPhys((u32)__ctru_linear_heap), // Location of the VBO
+			attr_frmt, // Format of the inputs
+			attr_mask, // Unused attribute mask, in our case bits 0~2 are cleared since they are used
+			attr_perm, // Attribute permutations (here it is the identity, passing each attribute in order)
+			num_buff, // Number of buffers
+			buff_offs, // Buffer offsets (placeholders)
+			buff_perm, // Attribute permutations for each buffer
+			buff_strd, // attribute strides for each buffer
+			buff_attr); // Number of attributes for each buffer
+
+		ctr_state.dirty = 0;
+	}
 }
 
 #ifndef GPUREG_VERTEX_OFFSET
@@ -405,7 +419,8 @@ void glDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, const GLv
 		return;
 	}
 	//TODO - only update what is needed
-	ctr_set_attr_buffers(count, basevertex);
+		ctr_set_attr_buffers(count, basevertex);
+		//ctr_state.dirty = 0;
 
 	if (type != GL_BYTE && type != GL_UNSIGNED_BYTE && type != GL_SHORT) {
 		return;
@@ -449,21 +464,42 @@ void glDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, const GLv
 		format = 0x80000000;
 	}
 #ifdef _3DS
-	int mmode;
-	int depth;
-	matrix_4x4 *mat;
+	if (ctr_state.dirty_matrix) {
+		int mmode;
+		int depth;
+		matrix_4x4 *mat;
 
-	mmode = GL_MODELVIEW;
-	depth = ctr_state.matrix_depth[mmode];
-	mat = &ctr_state.matrix[mmode][depth];
-	gsSetUniformMatrix(uLoc_modelView, mat->m);
-	//GPU_SetFloatUniform(GPU_VERTEX_SHADER, uLoc_modelView, (u32*)mat->m, 4);
+		mmode = GL_MODELVIEW;
+		depth = ctr_state.matrix_depth[mmode];
+		mat = &ctr_state.matrix[mmode][depth];
+		gsSetUniformMatrix(uLoc_modelView, mat->m);
+		//GPU_SetFloatUniform(GPU_VERTEX_SHADER, uLoc_modelView, (u32*)mat->m, 4);
 
-	mmode = GL_PROJECTION;
-	depth = ctr_state.matrix_depth[mmode];
-	mat = &ctr_state.matrix[mmode][depth];
-	//GPU_SetFloatUniform(GPU_VERTEX_SHADER, uLoc_projection, (u32*)mat->m, 4);
-	gsSetUniformMatrix(uLoc_projection, mat->m);
+		mmode = GL_PROJECTION;
+		depth = ctr_state.matrix_depth[mmode];
+		mat = &ctr_state.matrix[mmode][depth];
+		//GPU_SetFloatUniform(GPU_VERTEX_SHADER, uLoc_projection, (u32*)mat->m, 4);
+		gsSetUniformMatrix(uLoc_projection, mat->m);
+
+		ctr_state.dirty_matrix = 0;
+	}
+
+	if (ctr_state.dirty_texenv_src) {
+		GPUCMD_AddWrite(GPUREG_TEXENV0_SOURCE, ctr_state.texenv_src);
+		ctr_state.dirty_texenv_src = 0;
+	}
+	if (ctr_state.dirty_texenv_comb) {
+		GPUCMD_AddWrite(GPUREG_TEXENV0_COMBINER, ctr_state.texenv_comb);
+		ctr_state.dirty_texenv_comb = 0;
+	}
+	if (ctr_state.dirty_texenv_op) {
+		GPUCMD_AddWrite(GPUREG_TEXENV0_OPERAND, ctr_state.texenv_op);
+		ctr_state.dirty_texenv_op = 0;
+	}
+	if (ctr_state.dirty_texenv_color) {
+		GPUCMD_AddWrite(GPUREG_TEXENV0_COLOR, ctr_state.texenv_color);
+		ctr_state.dirty_texenv_color = 0;
+	}
 
 	//set primitive type
 	GPUCMD_AddMaskedWrite(GPUREG_PRIMITIVE_CONFIG, 0x2, _mode);

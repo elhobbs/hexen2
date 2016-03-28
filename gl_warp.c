@@ -8,10 +8,10 @@
 
 extern	model_t	*loadmodel;
 
-int		skytexturenum;
+int		skytexturenum = 0;
 
-int		solidskytexture;
-int		alphaskytexture;
+int		solidskytexture = 0;
+int		alphaskytexture = 0;
 float	speedscale;		// for top sky and bottom sky
 
 msurface_t	*warpface;
@@ -162,48 +162,6 @@ void GL_SubdivideSurface (msurface_t *fa)
 
 
 
-// speed up sin calculations - Ed
-float	turbsin[] =
-{
-	#include "gl_warp_sin.h"
-};
-#define TURBSCALE (256.0 / (2 * M_PI))
-
-/*
-=============
-EmitWaterPolys
-
-Does a water warp on the pre-fragmented glpoly_t chain
-=============
-*/
-void EmitWaterPolys (msurface_t *fa)
-{
-	glpoly_t	*p;
-	float		*v;
-	int			i;
-	float		s, t, os, ot;
-
-
-	for (p=fa->polys ; p ; p=p->next)
-	{
-		glBegin (GL_POLYGON);
-		for (i=0,v=p->verts[0] ; i<p->numverts ; i++, v+=VERTEXSIZE)
-		{
-			os = v[3];
-			ot = v[4];
-
-			s = os + turbsin[(int)((ot*0.125+realtime) * TURBSCALE) & 255];
-			s *= (1.0/64);
-
-			t = ot + turbsin[(int)((os*0.125+realtime) * TURBSCALE) & 255];
-			t *= (1.0/64);
-
-			glTexCoord2f (s, t);
-			glVertex3fv (v);
-		}
-		glEnd ();
-	}
-}
 
 
 
@@ -217,7 +175,7 @@ static int buffer_pos;
 EmitSkyPolys
 =============
 */
-void EmitSkyPolys (msurface_t *fa, qboolean save)
+void EmitSkyPolys2 (msurface_t *fa, qboolean save)
 {
 	glpoly_t	*p;
 	float		*v;
@@ -294,7 +252,7 @@ This will be called for brushmodels, the world
 will have them chained together.
 ===============
 */
-void EmitBothSkyLayers (msurface_t *fa)
+void EmitBothSkyLayers2 (msurface_t *fa)
 {
 	int			i;
 	int			lindex;
@@ -313,7 +271,7 @@ void EmitBothSkyLayers (msurface_t *fa)
 	speedscale -= (int)speedscale & ~127 ;
 
 	buffer_pos = 0;
-	EmitSkyPolys (fa,false);
+	EmitSkyPolys2 (fa,false);
 
 	glDisable (GL_BLEND);
 }
@@ -327,6 +285,10 @@ R_DrawSkyChain
 void R_DrawSkyChain (msurface_t *s)
 {
 	msurface_t	*fa;
+#if 1
+	for (fa = s; fa; fa = fa->texturechain)
+		EmitBothSkyLayers(fa);
+#else
 
 	// used when gl_texsort is on
 	GL_Bind(solidskytexture);
@@ -351,6 +313,7 @@ void R_DrawSkyChain (msurface_t *s)
 	glDisable (GL_BLEND);
 
 	c_sky_polys >>= 1;
+#endif
 }
 
 #endif
@@ -1090,9 +1053,9 @@ void R_InitSky (texture_t *mt)
 			b += ((byte *)rgba)[2];
 		}
 
-	((byte *)&transpix)[0] = r/(128*128);
-	((byte *)&transpix)[1] = g/(128*128);
-	((byte *)&transpix)[2] = b/(128*128);
+	((byte *)&transpix)[0] = r / (128 * 128);
+	((byte *)&transpix)[1] = g / (128 * 128);
+	((byte *)&transpix)[2] = b / (128 * 128);
 	((byte *)&transpix)[3] = 0;
 
 

@@ -15,13 +15,6 @@
 #define GL_MAP_WRITE_BIT 0
 #endif
 
-typedef struct {
-	float xyz[3];
-	float n[3];
-	float c[4];
-	float st[2];
-} ir_vert_t;
-
 #ifdef _3DS
 #define YPOS(_y) (240 - (_y))
 #else
@@ -64,8 +57,10 @@ int		gl_lightmap_format = 4;
 int		gl_solid_format = 3;
 int		gl_alpha_format = 4;
 
-int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
-int		gl_filter_max = GL_LINEAR;
+//int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
+//int		gl_filter_max = GL_LINEAR;
+int		gl_filter_min = GL_NEAREST;
+int		gl_filter_max = GL_NEAREST;
 
 
 int		texels;
@@ -85,7 +80,91 @@ typedef struct
 
 #define MAX_GLTEXTURES	2048
 gltexture_t	gltextures[MAX_GLTEXTURES];
-int			numgltextures;
+int			numgltextures = 0;
+
+void ctr_draw_tex(int x, int y, int texnum)
+{
+#ifdef _3DS
+	static ir_vert_t *verts;
+#else
+	static ir_vert_t verts[200];
+#endif
+	short indexes[6] = { 0,1,2,0,2,3 };
+	float light[4] = { 1, 1, 1, 1 };
+	int w, h;
+
+	glColor4f(1, 1, 1, 1);
+	GL_Bind(texnum);
+	//printf("Draw_Pic: %d %08x\n", gl->texnum, gl);
+#ifdef WIN32
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
+#endif
+
+	w = 8;
+	h = 8;
+
+#ifdef _3DS
+	verts = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
+	//printf("Draw_Pic: %08x %08x %d %d\n", pic, verts, x, y);
+#endif
+
+	verts[0].xyz[0] = x;
+	verts[0].xyz[1] = YPOS(y);
+	verts[0].xyz[2] = 0;
+	verts[0].st[0] = 0;
+	verts[0].st[1] = 0;
+	verts[0].n[0] = verts[0].n[1] = verts[0].n[2] = 1.0f;
+	memcpy(verts[0].c, light, 16);
+
+	verts[1].xyz[0] = x + w;
+	verts[1].xyz[1] = YPOS(y);
+	verts[1].xyz[2] = 0;
+	verts[1].st[0] = 1;
+	verts[1].st[1] = 0;
+	verts[1].n[0] = verts[1].n[1] = verts[1].n[2] = 1.0f;
+	memcpy(verts[1].c, light, 16);
+
+	verts[2].xyz[0] = x + w;
+	verts[2].xyz[1] = YPOS(y + h);
+	verts[2].xyz[2] = 0;
+	verts[2].st[0] = 1;
+	verts[2].st[1] = 1;
+	verts[2].n[0] = verts[2].n[1] = verts[2].n[2] = 1.0f;
+	memcpy(verts[2].c, light, 16);
+
+	verts[3].xyz[0] = x;
+	verts[3].xyz[1] = YPOS(y + h);
+	verts[3].xyz[2] = 0;
+	verts[3].st[0] = 0;
+	verts[3].st[1] = 1;
+	verts[3].n[0] = verts[3].n[1] = verts[3].n[2] = 1.0f;
+	memcpy(verts[3].c, light, 16);
+
+#ifdef _3DS
+	glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indexes, ir_vbo_base_vertex);
+#else
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indexes);
+#endif
+
+	ir_vbo_base_vertex += 4;
+}
+
+void ctr_draw_tex_all() {
+	int i;
+	float x = 0;
+	float y = 0;
+	for (i = 0; i < numgltextures; i++) {
+		ctr_draw_tex(x, y, gltextures[i].texnum);
+		x += 8;
+		if (x >= vid.width) {
+			x = 0;
+			y += 8;
+		}
+	}
+}
 
 
 void GL_Bind (int texnum)
@@ -326,6 +405,7 @@ qpic_t	*Draw_CachePic (char *path)
 	menu_numcachepics++;
 	strcpy (pic->name, path);
 
+	//printf("Draw_CachePic load: %s\n", pic->name);
 //
 // load the pic from disk
 //
@@ -455,7 +535,7 @@ void Draw_TextureMode_f (void)
 	}
 }
 
-static	unsigned	*trans;// [640 * 480]; 	// FIXME, temporary
+static	unsigned	*trans = 0;// [640 * 480]; 	// FIXME, temporary
 
 /*
 ===============
@@ -622,24 +702,14 @@ void Draw_Character (int x, int y, unsigned int num)
 
 	GL_Bind (char_texture);
 
-#if 1
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
+#ifdef WIN32
 	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
 	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
 	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
 #endif
+
+#if 1
 
 #ifdef _3DS
 	verts = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
@@ -684,14 +754,6 @@ void Draw_Character (int x, int y, unsigned int num)
 #endif
 
 	ir_vbo_base_vertex += 4;
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
 
 #else
 	glBegin (GL_QUADS);
@@ -784,25 +846,14 @@ void Draw_SmallCharacter (int x, int y, int num)
 	frow = row*ysize;
 
 	GL_Bind (char_smalltexture);
-
-#if 1
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
+#ifdef WIN32
 	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
 	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
 	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
 #endif
+
+#if 1
 
 #ifdef _3DS
 	verts = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
@@ -847,14 +898,6 @@ void Draw_SmallCharacter (int x, int y, int num)
 #endif
 
 	ir_vbo_base_vertex += 4;
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
 
 #else
 	glBegin (GL_QUADS);
@@ -922,31 +965,21 @@ void Draw_Pic (int x, int y, qpic_t *pic)
 	gl = (glpic_t *)pic->data;
 	glColor4f (1,1,1,1);
 	GL_Bind (gl->texnum);
-
-#if 1
-	w = pic->width;
-	h = pic->height;
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
+	//printf("Draw_Pic: %d %08x\n", gl->texnum, gl);
+#ifdef WIN32
 	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
 	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
 	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
 #endif
 
+#if 1
+	w = pic->width;
+	h = pic->height;
+
 #ifdef _3DS
 	verts = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
+	//printf("Draw_Pic: %08x %08x %d %d\n", pic, verts, x, y);
 #endif
 
 	verts[0].xyz[0] = x;
@@ -988,14 +1021,6 @@ void Draw_Pic (int x, int y, qpic_t *pic)
 #endif
 
 	ir_vbo_base_vertex += 4;
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
 
 #else
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
@@ -1041,8 +1066,10 @@ void Draw_PicCropped(int x, int y, qpic_t *pic)
 		return;
 	}
 
-	if (scrap_dirty)
-		Scrap_Upload ();
+	if (scrap_dirty) {
+		printf("scrap_dirty\n");
+		Scrap_Upload();
+	}
 	gl = (glpic_t *)pic->data;
 
 	// rjr tl/th need to be computed based upon pic->tl and pic->th
@@ -1071,26 +1098,14 @@ void Draw_PicCropped(int x, int y, qpic_t *pic)
 
 #if 1
 	GL_Bind(gl->texnum);
-	w = pic->width;
-	h = height;
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
+#ifdef WIN32
 	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
 	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
 	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
 #endif
+	w = pic->width;
+	h = height;
 
 #ifdef _3DS
 	verts = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
@@ -1135,14 +1150,7 @@ void Draw_PicCropped(int x, int y, qpic_t *pic)
 #endif
 
 	ir_vbo_base_vertex += 4;
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
 #else
 	glColor4f (1,1,1,1);
 	GL_Bind (gl->texnum);
@@ -1209,6 +1217,12 @@ void Draw_TransPicTranslate (int x, int y, qpic_t *pic, byte *translation)
 	extern int setup_class;
 
 	GL_Bind (translate_texture[setup_class-1]);
+#ifdef WIN32
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
+#endif
 
 	c = pic->width * pic->height;
 
@@ -1258,24 +1272,6 @@ void Draw_TransPicTranslate (int x, int y, qpic_t *pic, byte *translation)
 	w = pic->width;
 	h = pic->height;
 
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
-#endif
-
 #ifdef _3DS
 	verts = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
 #endif
@@ -1319,14 +1315,7 @@ void Draw_TransPicTranslate (int x, int y, qpic_t *pic, byte *translation)
 #endif
 
 	ir_vbo_base_vertex += 4;
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
 #else
 	glColor3f (1,1,1);
 	glBegin (GL_QUADS);
@@ -1381,25 +1370,14 @@ int M_DrawBigCharacter (int x, int y, int num, int numNext)
 	frow = row*ysize;
 
 	GL_Bind (char_menufonttexture);
-
-#if 1
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
+#ifdef WIN32
 	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), verts->xyz);
 	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), verts->n);
 	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), verts->c);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), verts->st);
 #endif
+
+#if 1
 
 #ifdef _3DS
 	verts = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
@@ -1444,14 +1422,6 @@ int M_DrawBigCharacter (int x, int y, int num, int numNext)
 #endif
 
 	ir_vbo_base_vertex += 4;
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
 
 #else
 	glBegin (GL_QUADS);
@@ -1613,13 +1583,14 @@ void Draw_BeginDisc (void)
 	static int index = 0;
 
 	if (!draw_disc[index] || loading_stage) return;
+	//printf("Draw_BeginDisc\n");
 
 	index++;
 	if (index >= MAX_DISC) index = 0;
 
 	glDrawBuffer  (GL_FRONT);
 
-	Draw_Pic (vid.width - 28, 0, draw_disc[index]);
+	//Draw_Pic (vid.width - 28, 0, draw_disc[index]);
 
 	glDrawBuffer  (GL_BACK);
 }
@@ -1634,6 +1605,7 @@ Call after completing any disc IO
 */
 void Draw_EndDisc (void)
 {
+	//printf("Draw_EndDisc\n");
 }
 
 #ifdef _3DS
@@ -1728,7 +1700,7 @@ void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,
 	int		i, j;
 	unsigned	*inrow, *inrow2;
 	unsigned	frac, fracstep;
-	unsigned	p1[1024], p2[1024];
+	static unsigned	p1[1024], p2[1024];
 	byte		*pix1, *pix2, *pix3, *pix4;
 
 	fracstep = inwidth*0x10000/outwidth;
@@ -1837,7 +1809,7 @@ GL_Upload32
 void GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap, qboolean alpha)
 {
 	int			samples;
-	static	unsigned	scaled[1024*512];	// [512*256];
+	static unsigned	scaled[1024 * 512];	// [512*256];
 	int			scaled_width, scaled_height;
 
 	//HACK HACK HACK
@@ -1864,8 +1836,8 @@ void GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap, qbool
 	if (scaled_height > gl_max_size.value)
 		scaled_height = gl_max_size.value;
 
-	if (scaled_width * scaled_height > sizeof(scaled)/4)
-		Sys_Error ("GL_LoadTexture: too big");
+	//if (scaled_width * scaled_height > (4 * 1024 * 512))//sizeof(scaled)/4)
+	//	Sys_Error ("GL_LoadTexture: too big");
 
 	// 3dfx has some aspect ratio constraints. . . can't go beyond 8 to 1 or below 1 to 8.
 	if( is_3dfx )
@@ -1879,6 +1851,11 @@ void GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap, qbool
 			scaled_height = scaled_width >> 3;
 		}
 	}
+
+	//scaled = malloc(4 * scaled_width * scaled_height);
+	//if (scaled == 0) {
+	//	Sys_Error("GL_LoadTexture: failed to allocate scaled");
+	//}
 
 	samples = alpha ? gl_alpha_format : gl_solid_format;
 
@@ -1971,6 +1948,8 @@ done: ;
 		  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_max);
 		  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
 	  }
+
+	  //free(scaled);
 }
 
 
@@ -2132,7 +2111,7 @@ int GL_LoadTexture (char *identifier, int width, int height, byte *data, int mip
 {
 	qboolean	noalpha;
 	int			i, p, s;
-	gltexture_t	*glt;
+	gltexture_t	*glt = 0;
 	char search[64];
 
 	if (!vid_initialized)
@@ -2157,6 +2136,14 @@ int GL_LoadTexture (char *identifier, int width, int height, byte *data, int mip
 	{
 		glt = &gltextures[numgltextures];
 	}
+#ifdef _3DS
+	if (glt == 0) {
+		printf("glt == 0");
+		while (1) {
+			svcSleepThread(500000);
+		}
+	}
+#endif
 	numgltextures++;
 
 	strcpy(glt->identifier, search);
@@ -2165,9 +2152,12 @@ int GL_LoadTexture (char *identifier, int width, int height, byte *data, int mip
 	glt->height = height;
 	glt->mipmap = mipmap;
 
+	//printf("GL_Bind %d\n", texture_extension_number);
 	GL_Bind(texture_extension_number );
 
+	//printf("before GL_Upload8 %s\n", identifier);
 	GL_Upload8 (data, width, height, mipmap, alpha, mode);
+	//printf("after GL_Upload8 %s\n", identifier);
 
 	texture_extension_number++;
 

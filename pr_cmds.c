@@ -2421,6 +2421,8 @@ void PF_changelevel (void)
 		return;
 	svs.changelevel_issued = true;
 
+	printf("PF_changelevel\n");
+
 	s1 = G_STRING(OFS_PARM0);
 	s2 = G_STRING(OFS_PARM1);
 

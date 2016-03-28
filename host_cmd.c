@@ -304,6 +304,8 @@ void Host_Changelevel_f (void)
 	char	_startspot[MAX_QPATH];
 	char	*startspot;
 
+	printf("Host_Changelevel_f\n");
+
 	if (Cmd_Argc() < 2)
 	{
 		Con_Printf ("changelevel <levelname> : continue game on a new level\n");
@@ -639,7 +641,8 @@ void Host_Loadgame_f (void)
 	FILE	*f;
 	char	mapname[MAX_QPATH];
 	float	time, tfloat;
-	char	str[32768], *start;
+	static char	str[32768];
+	char	*start;
 	int		i, r;
 	edict_t	*ent;
 	int		entnum;

@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+u32 __stacksize__ = 512 * 1024;
+
+
 #define CRC_A 59461 // "Who's Ridin' With Chaos?"
 #define CRC_B 54866 // "Santa needs a new sled!"
 
@@ -242,12 +245,25 @@ Sys_Init
 */
 void Sys_Init(void)
 {
+	Result r;
+	u8 isN3DS = 0;
+
 	gfxInitDefault();
 	consoleInit(GFX_BOTTOM, 0);
 	gpuInit();
 	keyboard_init();
 
 	atexit(_3ds_shutdown);
+	APT_CheckNew3DS(&isN3DS);
+	if (isN3DS) {
+		osSetSpeedupEnable(true);
+		aptOpenSession();
+		r = APT_SetAppCpuTimeLimit(80);
+		if (r != 0) {
+			printf("APT_SetAppCpuTimeLimit: Error\n");
+		}
+		aptCloseSession();
+	}
 
 	LegitCopy = true;
 }
@@ -401,7 +417,11 @@ int main(int argc, char **argv)
 	// take the greater of all the available memory or half the total memory,
 	// but at least 8 Mb and no more than 16 Mb, unless they explicitly
 	// request otherwise
+#ifdef WIN32
 	parms.memsize = MAXIMUM_WIN_MEMORY;
+#else
+	parms.memsize = envGetHeapSize()/2;
+#endif
 
 	if (COM_CheckParm("-heapsize"))
 	{

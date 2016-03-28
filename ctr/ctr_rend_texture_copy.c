@@ -107,6 +107,26 @@ void copy_tex_sub_tex_rgba_rgba(u8 *dst, int dst_width, int dst_height, int src_
 	copy_rgba_rgba(dst_blk, src_blk);
 }
 
+void copy_tex_sub_tex_rgba_4444(u8 *dst, int dst_width, int dst_height, int src_x, int src_y, int dst_x, int dst_y, u8 *src, int src_width) {
+	u8 *src_blk;
+	u8 *dst_blk;
+	int dst_x_blk;
+	int dst_y_blk;
+	int z;
+
+	//flip dst_y
+	dst_y = dst_height - 1 - dst_y;
+
+	//start of dst block
+	dst_x_blk = dst_x & ~7;
+	dst_y_blk = dst_y / 8;
+
+	src_blk = &src[(src_y * src_width + src_x) * 4];
+	dst_blk = &dst[(dst_y_blk * dst_width + dst_x_blk) * 2 * 8];
+	z = 4 * morton_lut[((dst_y & 7) << 3) | (dst_x & 7)];
+	copy_rgba_4444(dst_blk, src_blk);
+}
+
 void copy_tex_sub_rgba_rgba(CTR_TEXTURE *dst, u8 *src, int x, int y, int width, int height) {
 	int w, h;
 	u8 *dst_data = dst->data;
@@ -115,6 +135,18 @@ void copy_tex_sub_rgba_rgba(CTR_TEXTURE *dst, u8 *src, int x, int y, int width, 
 	for (h = 0; h < height; h++) {
 		for (w = 0; w < width; w++) {
 			copy_tex_sub_tex_rgba_rgba(dst_data, dst_width, dst_height, w, h, x + w, y + h, src, width);
+		}
+	}
+}
+
+void copy_tex_sub_rgba_4444(CTR_TEXTURE *dst, u8 *src, int x, int y, int width, int height) {
+	int w, h;
+	u8 *dst_data = dst->data;
+	int dst_width = dst->width;
+	int dst_height = dst->height;
+	for (h = 0; h < height; h++) {
+		for (w = 0; w < width; w++) {
+			copy_tex_sub_tex_rgba_4444(dst_data, dst_width, dst_height, w, h, x + w, y + h, src, width);
 		}
 	}
 }
@@ -470,7 +502,7 @@ void copy_tex_rgba_4444(CTR_TEXTURE *dst, u8 *src, int width, int height) {
 	u8 *src_row = &src[((height - 8) * width) * 4];
 	for (y = height - 8; y >= 0; y -= 8) {
 		for (x = 0; x < width; x += 8) {
-			copy_tex_block_rgba_4444(src_row + x * 4, dst_data, width * 3);
+			copy_tex_block_rgba_4444(src_row + x * 4, dst_data, width * 4);
 			dst_data += (64 * 2);
 		}
 		src_row -= (8 * width * 4);

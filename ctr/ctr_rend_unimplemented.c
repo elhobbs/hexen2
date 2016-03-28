@@ -13,11 +13,6 @@
 #endif
 
 
-void glTexEnvf(GLenum val0, GLenum val1, GLenum val2) {
-	DBGPRINT("\n");
-}
-
-
 void glBlendFunc(GLenum a, GLenum b) {
 	DBGPRINT("\n");
 }
@@ -173,9 +168,6 @@ void glShadeModel(GLenum a) {
 }
 
 
-void glColor4f(GLfloat a, GLfloat b, GLfloat c, GLfloat d) {
-	DBGPRINT("\n");
-}
 
 
 void glGetIntegerv(GLenum pname, GLint *params)

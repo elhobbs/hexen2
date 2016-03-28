@@ -128,6 +128,7 @@ extern "C" {
 
 	void glGenVertexArrays(GLsizei n, GLuint *arrays);
 	void glBindVertexArray(GLuint array);
+	void glDeleteVertexArrays(GLsizei n, const GLuint *buffers);
 	void glLockArraysEXT(GLint first, GLsizei count);
 	void glUnlockArraysEXT(void);
 
@@ -160,7 +161,8 @@ extern "C" {
 
 	/*unimplemented*/
 	void glDisable(GLenum val);
-	void glTexEnvf(GLenum val0, GLenum val1, GLenum val2);
+	void glTexEnvf(GLenum val0, GLenum val1, GLfloat val2);
+	void glTexEnvi(GLenum val0, GLenum val1, GLint val2);
 	void glBlendFunc(GLenum a, GLenum b);
 	void glDepthMask(GLenum a);
 	void glPolygonMode(GLenum a, GLenum b);
@@ -275,6 +277,8 @@ extern "C" {
 #define GL_PROJECTION_MATRIX		0x1056
 #define GL_CLAMP_TO_EDGE			0x1057
 
+#define	GL_ALPHA					0x1058/*GPU_A8*/
+
 #define GL_NO_ERROR                       0
 #define GL_INVALID_ENUM                   0x0500
 #define GL_INVALID_VALUE                  0x0501
@@ -282,3 +286,32 @@ extern "C" {
 #define GL_STACK_OVERFLOW                 0x0503
 #define GL_STACK_UNDERFLOW                0x0504
 #define GL_OUT_OF_MEMORY                  0x0505
+
+#define GL_SRC0_RGB 0x2000
+#define GL_SRC1_RGB 0x2001
+#define GL_SRC2_RGB 0x2002
+
+#define GL_PRIMARY_COLOR 0x2003
+
+#define GL_SRC0_ALPHA 0x2004
+#define GL_SRC1_ALPHA 0x2005
+#define GL_SRC2_ALPHA 0x2006
+
+#define GL_OPERAND0_RGB 0x2007
+#define GL_OPERAND1_RGB 0x2008
+#define GL_OPERAND2_RGB 0x2009
+
+#define GL_OPERAND0_ALPHA 0x200A
+#define GL_OPERAND1_ALPHA 0x200B
+#define GL_OPERAND2_ALPHA 0x200C
+
+#define GL_SUBTRACT 0x200D
+#define GL_DOT3_RGB 0x200E
+
+#define GL_COMBINE_RGB 0x200F
+#define GL_COMBINE_ALPHA 0x2010
+
+#define GL_INTERPOLATE 0x2011
+#define GL_CONSTANT 0x2012
+#define GL_PREVIOUS 0x2013
+

@@ -22,9 +22,24 @@ void GL_EndRendering (void);
 
 #ifdef WIN32
 
+#define GL_ARRAY_BUFFER                   0x8892
+#define GL_ELEMENT_ARRAY_BUFFER           0x8893
+
 // Function prototypes for the Texture Object Extension routines
 typedef GLboolean (APIENTRY *ARETEXRESFUNCPTR)(GLsizei, const GLuint *,
                     const GLboolean *);
+typedef void (APIENTRY *GENBUFFERSFUNCPTR)(GLenum, GLuint *);
+typedef void (APIENTRY *BINDBUFFERFUNCPTR)(GLenum, GLuint);
+typedef void (APIENTRY *BUFFERDATAFUNCPTR)(GLenum target, GLsizei size, const GLvoid *data, GLenum usage);
+typedef void (APIENTRY *DELETEBUFFERSFUNCPTR)(GLsizei n, const GLuint *buffers);
+typedef void* (APIENTRY *MAPBUFFERFUNCPTR)(GLenum target, GLenum access);
+typedef void (APIENTRY *MAPBUFFERRANGEFUNCPTR)(GLenum target, GLuint offset, GLuint length, GLenum access);
+typedef void (APIENTRY *UNMAPBUFFERFUNCPTR)(GLenum target);
+
+typedef void (APIENTRY *GENVERTEXARRAYSFUNCPTR)(GLenum, GLuint*);
+typedef void (APIENTRY *BINDVERTEXARRAYFUNCPTR)(GLuint);
+typedef void (APIENTRY *DELETEVERTEXARRAYSFUNCPTR)(GLsizei n, const GLuint *buffers);
+
 typedef void (APIENTRY *BINDTEXFUNCPTR)(GLenum, GLuint);
 typedef void (APIENTRY *DELTEXFUNCPTR)(GLsizei, const GLuint *);
 typedef void (APIENTRY *GENTEXFUNCPTR)(GLsizei, GLuint *);
@@ -36,6 +51,18 @@ typedef int  (APIENTRY *FX_DISPLAY_MODE_EXT)(int);
 typedef void (APIENTRY *FX_SET_PALETTE_EXT)( unsigned long * );
 typedef void (APIENTRY *FX_MARK_PAL_TEXTURE_EXT)( void );
 
+extern GENBUFFERSFUNCPTR glGenBuffers;
+extern BINDBUFFERFUNCPTR glBindBuffer;
+extern BUFFERDATAFUNCPTR glBufferData;
+extern DELETEBUFFERSFUNCPTR glDeleteBuffers;
+extern MAPBUFFERFUNCPTR glMapBuffer;
+extern MAPBUFFERRANGEFUNCPTR glMapBufferRange;
+extern UNMAPBUFFERFUNCPTR glUnmapBuffer;
+extern DELETEVERTEXARRAYSFUNCPTR glDeleteVertexArrays;
+
+
+extern GENVERTEXARRAYSFUNCPTR glGenVertexArrays;
+extern BINDVERTEXARRAYFUNCPTR glBindVertexArray;
 extern	BINDTEXFUNCPTR bindTexFunc;
 extern	DELTEXFUNCPTR delTexFunc;
 extern	TEXSUBIMAGEPTR TexSubImage2DFunc;
@@ -93,6 +120,15 @@ typedef struct
 } glpic_t;
 
 extern	int glx, gly, glwidth, glheight;
+
+typedef struct {
+	float xyz[3];
+	float n[3];
+	float c[4];
+	float st[2];
+	float uv[2];
+} ir_vert_t;
+
 
 #ifdef WIN32
 extern	PROC glArrayElementEXT;

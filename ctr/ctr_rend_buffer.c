@@ -78,4 +78,6 @@ void ctr_rend_buffer_reset() {
 	ctr_state.buffer_pos = 0;
 	ctr_buffer_frame = ctr_buffer_frame ? 0 : 1;
 	ctr_state.buffer = ctr_buffer;// +ctr_buffer_frame * CTR_REND_BUFFER_MAX;
+	ctr_state.dirty = 1;
+	ctr_state.dirty_matrix = 1;
 }

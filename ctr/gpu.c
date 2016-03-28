@@ -134,7 +134,7 @@ void gpuFrameBegin(void)
 
 	glUseProgram(0);
 
-/*	GPU_SetTextureEnable(GPU_TEXUNIT0);
+	GPU_SetTextureEnable(GPU_TEXUNIT0);
 
 	GPU_SetTexEnv(0,
 		GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
@@ -147,7 +147,7 @@ void gpuFrameBegin(void)
 	GPU_SetDummyTexEnv(2);
 	GPU_SetDummyTexEnv(3);
 	GPU_SetDummyTexEnv(4);
-	GPU_SetDummyTexEnv(5);*/
+	GPU_SetDummyTexEnv(5);
 
 }
 

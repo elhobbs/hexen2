@@ -479,6 +479,19 @@ void VID_UpdateWindowStatus (void)
 
 BINDTEXFUNCPTR bindTexFunc;
 
+GENBUFFERSFUNCPTR glGenBuffers;
+BINDBUFFERFUNCPTR glBindBuffer;
+BUFFERDATAFUNCPTR glBufferData;
+DELETEBUFFERSFUNCPTR glDeleteBuffers;
+MAPBUFFERFUNCPTR glMapBuffer;
+MAPBUFFERRANGEFUNCPTR glMapBufferRange;
+UNMAPBUFFERFUNCPTR glUnmapBuffer;
+
+GENVERTEXARRAYSFUNCPTR glGenVertexArrays;
+BINDVERTEXARRAYFUNCPTR glBindVertexArray;
+DELETEVERTEXARRAYSFUNCPTR glDeleteVertexArrays;
+
+
 #define TEXTURE_EXT_STRING "GL_EXT_texture_object"
 
 #define FX_DISPLAY_MODE_EXT_STRING "gl3DfxDisplayModeEXT"
@@ -604,6 +617,19 @@ void CheckTextureExtensions (void)
 		return;
 	}
 
+	glGenBuffers = (GENBUFFERSFUNCPTR)wglGetProcAddress((LPCSTR) "glGenBuffers");
+	glBindBuffer = (BINDBUFFERFUNCPTR)wglGetProcAddress((LPCSTR) "glBindBuffer");
+	glBufferData = (BUFFERDATAFUNCPTR)wglGetProcAddress((LPCSTR) "glBufferData");
+	glDeleteBuffers = (DELETEBUFFERSFUNCPTR)wglGetProcAddress((LPCSTR) "glDeleteBuffers");
+	glMapBuffer = (MAPBUFFERFUNCPTR)wglGetProcAddress((LPCSTR) "glMapBuffer");
+	glMapBufferRange = (MAPBUFFERRANGEFUNCPTR)wglGetProcAddress((LPCSTR) "glMapBufferRange");
+	glUnmapBuffer = (UNMAPBUFFERFUNCPTR)wglGetProcAddress((LPCSTR) "glUnmapBuffer");
+
+
+	glGenVertexArrays = (GENVERTEXARRAYSFUNCPTR)wglGetProcAddress((LPCSTR) "glGenVertexArrays");
+	glBindVertexArray = (BINDVERTEXARRAYFUNCPTR)wglGetProcAddress((LPCSTR) "glBindVertexArray");
+	glDeleteVertexArrays = (DELETEVERTEXARRAYSFUNCPTR)wglGetProcAddress((LPCSTR) "glDeleteVertexArrays");
+
 /* load library and get procedure adresses for texture extension API */
 	if ((bindTexFunc = (BINDTEXFUNCPTR)
 		wglGetProcAddress((LPCSTR) "glBindTextureEXT")) == NULL)
@@ -649,6 +675,10 @@ int		texture_mode = GL_LINEAR;
 
 int		texture_extension_number = 1;
 
+extern int ir_vbo;
+extern int ir_vbo_base_vertex;
+#define IR_MAX_VERTEX 64000
+
 /*
 ===============
 GL_Init
@@ -663,6 +693,8 @@ void GL_Init (void)
 
 	gl_version = glGetString (GL_VERSION);
 	//Con_Printf ("GL_VERSION: %s\n", gl_version);
+	//MessageBoxA(0, gl_version, "OPENGL VERSION", 0);
+
 	gl_extensions = glGetString (GL_EXTENSIONS);
 	//Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
 
@@ -715,6 +747,22 @@ void GL_Init (void)
 	glTexCoordPointerEXT (2, GL_FLOAT, 0, 0, &glv.s);
 	glColorPointerEXT (3, GL_FLOAT, 0, 0, &glv.r);
 #endif
+
+	// Create the vbo
+	/*glGenBuffers(1, &ir_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(ir_vert_t)*IR_MAX_VERTEX, 0, 0);// GL_STREAM_DRAW);*/
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+
+	/*glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);*/
 }
 
 /*
@@ -735,11 +783,19 @@ void GL_BeginRendering (int *x, int *y, int *width, int *height)
 //		Sys_Error ("wglMakeCurrent failed");
 
 //	glViewport (*x, *y, *width, *height);
+	//glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
 }
 
 
 void GL_EndRendering (void)
 {
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	if (!scr_skipupdate)
 		SwapBuffers(maindc);
 

@@ -158,6 +158,22 @@ void glGenVertexArrays(GLsizei n, GLuint *arrays) {
 	}
 }
 
+void glDeleteVertexArrays(GLsizei n, const GLuint *vaos) {
+	if (n <= 0 || vaos == 0) {
+		return;
+	}
+	GLuint i;
+	for (i = 0; i < n; i++) {
+		CTR_VAO *vao = ctr_handle_get(CTR_HANDLE_VAO, vaos[i]);
+		if (vao == 0) {
+			continue;
+		}
+		ctr_handle_remove(CTR_HANDLE_VAO, vaos[i]);
+		free(vao);
+	}
+}
+
+
 void glBindVertexArray(GLuint arrayid) {
 	DBGPRINT("bind vao: %08x\n", arrayid);
 	if (arrayid == 0) {
@@ -166,6 +182,7 @@ void glBindVertexArray(GLuint arrayid) {
 	}
 	if (ctr_handle_get(CTR_HANDLE_VAO, arrayid) != 0) {
 		ctr_state.bound_vao = arrayid;
+		ctr_state.dirty = 1;
 		DBGPRINT("bound vao: %08x\n", arrayid);
 	}
 }

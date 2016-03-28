@@ -1,8 +1,8 @@
 #pragma once
 
 #ifdef _3DS
-#include <3ds\types.h>
-#include <3ds\gpu\gpu.h>
+#include <3ds/types.h>
+#include <3ds/gpu/gpu.h>
 #include <3ds/linear.h>
 #endif
 
@@ -81,7 +81,7 @@ typedef struct {
 	GLenum type;
 	GLsizei stride;
 	const GLvoid *ptr;
-	const u32 reg_config;
+	//const u32 reg_config;
 	GLuint bound_array_buffer;
 } CTR_ATTR;
 
@@ -124,7 +124,58 @@ typedef struct {
 
 	u32 texture_units;
 
+	union {
+		u32 texenv_src;
+		struct {
+			u32 texenv_src_rgb0 : 4;
+			u32 texenv_src_rgb1 : 4;
+			u32 texenv_src_rgb2 : 4;
+			u32 texenv_src_rgb3 : 4;
+			u32 texenv_src_alpha0 : 4;
+			u32 texenv_src_alpha1 : 4;
+			u32 texenv_src_alpha2 : 4;
+			u32 texenv_src_alpha3 : 4;
+		};
+	};
+
+	union {
+		u32 texenv_comb;
+		struct {
+			u32 texenv_comb_rgb : 4;
+			u32 texenv_comb_unk1 : 12;
+			u32 texenv_comb_alpha : 4;
+			u32 texenv_comb_unk2 : 12;
+		};
+	};
+
+	union {
+		u32 texenv_op;
+		struct {
+			u32 texenv_op_rgb0 : 4;
+			u32 texenv_op_rgb1 : 4;
+			u32 texenv_op_rgb2 : 4;
+			u32 texenv_op_alpha0 : 3;
+			u32 texenv_op_alpha1 : 3;
+			u32 texenv_op_alpha2 : 3;
+		};
+	};
+
+	union {
+		u32 texenv_color;
+		struct {
+			u8 texenv_color_r;
+			u8 texenv_color_g;
+			u8 texenv_color_b;
+			u8 texenv_color_a;
+		};
+	};
+
 	u32 dirty;
+	u32 dirty_matrix;
+	u32 dirty_texenv_src;
+	u32 dirty_texenv_comb;
+	u32 dirty_texenv_op;
+	u32 dirty_texenv_color;
 
 	GLuint bound_vao;
 	GLuint bound_array_buffer;
@@ -168,5 +219,14 @@ void copy_tex_rgba_4444(CTR_TEXTURE *dst, u8 *src, int width, int height);
 void copy_tex_8_8(CTR_TEXTURE *dst, u8 *src, int width, int height);
 
 void copy_tex_sub_rgb_rgb(CTR_TEXTURE *dst, u8 *src, int x, int y, int width, int height);
+void copy_tex_sub_rgba_4444(CTR_TEXTURE *dst, u8 *src, int x, int y, int width, int height);
 void copy_tex_sub_rgb_5551(CTR_TEXTURE *dst, u8 *src, int x, int y, int width, int height);
 void copy_tex_sub_8_8(CTR_TEXTURE *dst, u8 *src, int x, int y, int width, int height);
+
+void ctr_rend_texenv_src_rgb(GLenum pname, GLuint param);
+void ctr_rend_texenv_src_alpha(GLenum pname, GLuint param);
+void ctr_rend_texenv_op_rgb(GLenum pname, GLuint param);
+void ctr_rend_texenv_op_alpha(GLenum pname, GLuint param);
+void ctr_rend_texenv_comb_rgb(GLuint param);
+void ctr_rend_texenv_comb_alpha(GLuint param);
+

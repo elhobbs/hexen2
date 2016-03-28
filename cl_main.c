@@ -11,6 +11,7 @@
 
 #ifdef _3DS
 #include <3ds.h>
+#include <dirent.h>
 #endif
 
 // we need to declare some mouse variables here, because the menu system
@@ -91,7 +92,40 @@ void CL_ClearState (void)
 
 void CL_RemoveGIPFiles (char *path)
 {
-#ifdef WIN32
+#ifndef WIN32
+	char	name[MAX_OSPATH], tempdir[MAX_OSPATH];
+	DIR *dir;
+	struct dirent *ent;
+	int len, i;
+
+	if (path)
+	{
+		sprintf(tempdir, "%s\\", path);
+	}
+	else
+	{
+		i = GetTempPath(sizeof(tempdir), tempdir);
+		if (!i)
+		{
+			sprintf(tempdir, "%s\\", com_gamedir);
+		}
+	}
+
+	dir = opendir(tempdir);
+	if (dir == 0) {
+		return;
+	}
+
+	while ((ent = readdir(dir)) != 0) {
+		len = strlen(ent->d_name);
+		if (len > 4 && strnicmp(ent->d_name + len - 4, ".gip",4) == 0) {
+			sprintf(name, "%s\\%s", com_gamedir, ent->d_name);
+			printf(" removing file: %s\n", name);
+			remove(name);
+		}
+	}
+
+#else
 	char	name[MAX_OSPATH],tempdir[MAX_OSPATH];
 	int i;
 	HANDLE handle;
@@ -131,7 +165,16 @@ void CL_RemoveGIPFiles (char *path)
 
 qboolean CL_CopyFiles(char *source, char *pat, char *dest)
 {
-#ifdef WIN32
+#ifndef WIN32
+	printf("CL_CopyFiles\n");
+	printf("source: %s\n", source);
+	printf("pat: %s\n", pat);
+	printf("dest: %s\n", dest);
+	do {
+		gspWaitForVBlank();
+	} while (1);
+	return false;
+#else
 	char	name[MAX_OSPATH],tempdir[MAX_OSPATH];
 	HANDLE handle;
 	WIN32_FIND_DATA filedata;
@@ -155,8 +198,6 @@ qboolean CL_CopyFiles(char *source, char *pat, char *dest)
 		FindClose(handle);
 
 	return error;
-#else
-	return false;
 #endif
 }
 

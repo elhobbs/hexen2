@@ -36,6 +36,7 @@ void glBindBuffer(GLenum target, GLuint buffer) {
 			ctr_state.bound_element_array_buffer = 0;
 			break;
 		}
+		ctr_state.dirty = 1;
 		return;
 	}
 	if (ctr_handle_get(CTR_HANDLE_BUFFER, buffer) != 0) {
@@ -52,6 +53,7 @@ void glBindBuffer(GLenum target, GLuint buffer) {
 		}
 		DBGPRINT("bound buffer: %08x\n", buffer);
 	}
+	ctr_state.dirty = 1;
 }
 
 void glBufferData(GLenum target, GLsizei size, const GLvoid *data, GLenum usage) {
@@ -118,10 +120,12 @@ void *glMapBufferRange(GLenum target, GLuint offset, GLuint length, GLenum acces
 		break;
 	}
 	if (id == 0) {
+		printf("glMapBufferRange: id == 0\n");
 		return 0;
 	}
 	CTR_BUFFER *buf = ctr_handle_get(CTR_HANDLE_BUFFER, id);
 	if (buf == 0) {
+		printf("glMapBufferRange: buf == 0\n");
 		return 0;
 	}
 	return (buf->data + (u32)offset);
@@ -153,4 +157,5 @@ void glDeleteBuffers(GLsizei n, const GLuint *buffers) {
 #endif //end VBO stuff
 
 void ctr_rend_vbo_init() {
+	ctr_state.dirty = 1;
 }

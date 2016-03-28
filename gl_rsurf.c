@@ -12,13 +12,6 @@ int			skytexturenum;
 #define	GL_RGBA4	0
 #endif
 
-typedef struct {
-	float xyz[3];
-	float n[3];
-	float c[4];
-	float st[2];
-} ir_vert_t;
-
 int ir_vbo_base_vertex = 0;
 int ir_vbo = 0;;
 
@@ -191,9 +184,9 @@ store:
 			}
 		}
 		break;
+	case GL_ALPHA:
 	case GL_LUMINANCE:
 #ifdef WIN32
-	case GL_ALPHA:
 	case GL_INTENSITY:
 #endif
 		bl = blocklights;
@@ -265,7 +258,7 @@ extern	int		solidskytexture;
 extern	int		alphaskytexture;
 extern	float	speedscale;		// for top sky and bottom sky
 
-void DrawGLWaterPoly (glpoly_t *p);
+void DrawGLWaterPoly (glpoly_t *p, float intensity, float alpha_val);
 void DrawGLWaterPolyLightmap (glpoly_t *p);
 
 /*
@@ -385,7 +378,7 @@ void R_DrawSequentialPoly (msurface_t *s)
 
 	t = R_TextureAnimation (s->texinfo->texture);
 	GL_Bind (t->gl_texturenum);
-	DrawGLWaterPoly (p);
+	DrawGLWaterPoly (p, intensity, alpha_val);
 
 	GL_Bind (lightmap_textures + s->lightmaptexturenum);
 	glEnable (GL_BLEND);
@@ -401,13 +394,65 @@ DrawGLWaterPoly
 Warp the vertex coordinates
 ================
 */
-void DrawGLWaterPoly (glpoly_t *p)
+void DrawGLWaterPoly (glpoly_t *p, float intensity, float alpha_val)
 {
+#ifdef _3DS
+	static ir_vert_t *vert;
+#else
+	static ir_vert_t vert[200];
+#endif
+	static unsigned short indexes[68 * 3];
 	int		i;
 	float	*v;
 	float	s, t, os, ot;
 	vec3_t	nv;
+	int index;
 
+#ifdef WIN32
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), vert->xyz);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), vert->n);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), vert->c);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), vert->st);
+#endif
+
+#ifdef _3DS
+	vert = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
+#endif
+
+	v = p->verts[0];
+	for (i = 0; i<p->numverts; i++, v += VERTEXSIZE) {
+		vert[i].n[0] = 1;
+		vert[i].n[2] = 1;
+		vert[i].n[1] = 1;
+		vert[i].xyz[0] = v[0] + 8 * sin(v[1] * 0.05 + realtime)*sin(v[2] * 0.05 + realtime);
+		vert[i].xyz[1] = v[1] + 8 * sin(v[0] * 0.05 + realtime)*sin(v[2] * 0.05 + realtime);
+		vert[i].xyz[2] = v[2];
+		vert[i].c[0] = intensity;
+		vert[i].c[1] = intensity;
+		vert[i].c[2] = intensity;
+		vert[i].c[3] = alpha_val;
+		vert[i].st[0] = v[3];
+		vert[i].st[1] = v[4];
+		vert[i].uv[0] = v[5];
+		vert[i].uv[1] = v[6];
+}
+	index = 0;
+	for (i = 2; i < p->numverts; i++) {
+		indexes[index + 0] = 0;
+		indexes[index + 1] = i - 1;
+		indexes[index + 2] = i;
+		index += 3;
+	}
+
+#ifdef _3DS
+	glDrawElementsBaseVertex(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes, ir_vbo_base_vertex);
+#else
+	glDrawElements(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes);
+#endif
+
+	ir_vbo_base_vertex += p->numverts;
+
+#if 0
 	glBegin (GL_TRIANGLE_FAN);
 	v = p->verts[0];
 	for (i=0 ; i<p->numverts ; i++, v+= VERTEXSIZE)
@@ -421,6 +466,7 @@ void DrawGLWaterPoly (glpoly_t *p)
 		glVertex3fv (nv);
 	}
 	glEnd ();
+#endif
 }
 void DrawGLWaterPolyLightmap (glpoly_t *p)
 {
@@ -444,13 +490,269 @@ void DrawGLWaterPolyLightmap (glpoly_t *p)
 	glEnd ();
 }
 
+// speed up sin calculations - Ed
+float	turbsin[] =
+{
+#include "gl_warp_sin.h"
+};
+#define TURBSCALE (256.0 / (2 * M_PI))
+
+/*
+=============
+EmitWaterPolys
+
+Does a water warp on the pre-fragmented glpoly_t chain
+=============
+*/
+void EmitWaterPolys(msurface_t *fa, float intensity, float alpha_val)
+{
+#ifdef _3DS
+	static ir_vert_t *vert;
+#else
+	static ir_vert_t vert[200];
+#endif
+	static unsigned short indexes[68 * 3];
+	glpoly_t	*p;
+	float		*v;
+	int			i;
+	float		s, t, os, ot;
+	int index;
+
+#ifdef WIN32
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), vert->xyz);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), vert->n);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), vert->c);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), vert->st);
+#endif
+
+	for (p = fa->polys; p; p = p->next)
+	{
+#ifdef _3DS
+		vert = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
+#endif
+
+		v = p->verts[0];
+		for (i = 0; i < p->numverts; i++, v += VERTEXSIZE) {
+			os = v[3];
+			ot = v[4];
+
+			s = os + turbsin[(int)((ot*0.125 + realtime) * TURBSCALE) & 255];
+			s *= (1.0 / 64);
+
+			t = ot + turbsin[(int)((os*0.125 + realtime) * TURBSCALE) & 255];
+			t *= (1.0 / 64);
+
+			vert[i].n[0] = 1;
+			vert[i].n[2] = 1;
+			vert[i].n[1] = 1;
+			vert[i].xyz[0] = v[0];
+			vert[i].xyz[1] = v[1];
+			vert[i].xyz[2] = v[2];
+			vert[i].c[0] = intensity;
+			vert[i].c[1] = intensity;
+			vert[i].c[2] = intensity;
+			vert[i].c[3] = alpha_val;
+			vert[i].st[0] = s;
+			vert[i].st[1] = t;
+			vert[i].uv[0] = 0;
+			vert[i].uv[1] = 0;
+		}
+		index = 0;
+		for (i = 2; i < p->numverts; i++) {
+			indexes[index + 0] = 0;
+			indexes[index + 1] = i - 1;
+			indexes[index + 2] = i;
+			index += 3;
+		}
+
+#ifdef _3DS
+		glDrawElementsBaseVertex(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes, ir_vbo_base_vertex);
+#else
+		glDrawElements(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes);
+#endif
+
+		ir_vbo_base_vertex += p->numverts;
+	}
+
+#if 0
+	for (p = fa->polys; p; p = p->next)
+	{
+		glBegin(GL_POLYGON);
+		for (i = 0, v = p->verts[0]; i<p->numverts; i++, v += VERTEXSIZE)
+		{
+			os = v[3];
+			ot = v[4];
+
+			s = os + turbsin[(int)((ot*0.125 + realtime) * TURBSCALE) & 255];
+			s *= (1.0 / 64);
+
+			t = ot + turbsin[(int)((os*0.125 + realtime) * TURBSCALE) & 255];
+			t *= (1.0 / 64);
+
+			glTexCoord2f(s, t);
+			glVertex3fv(v);
+		}
+		glEnd();
+	}
+#endif
+}
+
+/*
+=============
+EmitSkyPolys
+=============
+*/
+void EmitSkyPolys(msurface_t *fa)
+{
+#ifdef _3DS
+	static ir_vert_t *vert;
+#else
+	static ir_vert_t vert[200];
+#endif
+	static unsigned short indexes[68 * 3];
+	glpoly_t	*p;
+	float		*v;
+	int			i;
+	float	s, t;
+	vec3_t	dir, sort;
+	float	length;
+	int index;
+
+	float speedscale = realtime * 8;
+	float speedscale2 = realtime * 16;
+	
+	speedscale -= (int)speedscale & ~127;
+	speedscale2 -= (int)speedscale2 & ~127;
+
+#ifdef WIN32
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), vert->xyz);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), vert->n);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), vert->c);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), vert->st);
+#endif
+
+	for (p = fa->polys; p; p = p->next)
+	{
+		c_sky_polys++;
+
+#ifdef _3DS
+		vert = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
+#endif
+
+		v = p->verts[0];
+		for (i = 0; i < p->numverts; i++, v += VERTEXSIZE) {
+			VectorSubtract(v, r_origin, dir);
+			dir[2] *= 3;	// flatten the sphere
+
+			length = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
+			length = sqrt(length);
+
+			length = 6 * 63 / length;
+
+			dir[0] *= length;
+			dir[1] *= length;
+
+
+			vert[i].n[0] = 1;
+			vert[i].n[2] = 1;
+			vert[i].n[1] = 1;
+			vert[i].xyz[0] = v[0];
+			vert[i].xyz[1] = v[1];
+			vert[i].xyz[2] = v[2];
+			vert[i].c[0] = 1;
+			vert[i].c[1] = 1;
+			vert[i].c[2] = 1;
+			vert[i].c[3] = 1;
+
+			s = (speedscale + dir[0]) * (1.0 / 128);
+			t = (speedscale + dir[1]) * (1.0 / 128);
+			vert[i].st[0] = s;
+			vert[i].st[1] = t;
+			s = (speedscale2 + dir[0]) * (1.0 / 128);
+			t = (speedscale2 + dir[1]) * (1.0 / 128);
+			vert[i].uv[0] = s;
+			vert[i].uv[1] = t;
+		}
+		index = 0;
+		for (i = 2; i < p->numverts; i++) {
+			indexes[index + 0] = 0;
+			indexes[index + 1] = i - 1;
+			indexes[index + 2] = i;
+			index += 3;
+		}
+
+#ifdef _3DS
+		glDrawElementsBaseVertex(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes, ir_vbo_base_vertex);
+#else
+		glDrawElements(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes);
+#endif
+
+		ir_vbo_base_vertex += p->numverts;
+	}
+}
+
+void EmitBothSkyLayers(msurface_t *fa)
+{
+	int			i;
+	int			lindex;
+	float		*vec;
+
+	glActiveTexture(GL_TEXTURE0);
+	GL_Bind(solidskytexture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, alphaskytexture);
+
+	glColor4f(0.4f, 0.4f, 0.4f, 0.4f);
+
+	//rgb
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_INTERPOLATE);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC2_RGB, GL_CONSTANT);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB, GL_SRC_ALPHA);
+
+
+	/*//alpha
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_INTERPOLATE);
+	
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_ALPHA, GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, GL_SRC_ALPHA);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC2_ALPHA, GL_CONSTANT);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA, GL_CONSTANT);*/
+
+	//draw pols
+	EmitSkyPolys(fa);
+
+	//reset env
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_PRIMARY_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
+
+	//disable texture
+	glActiveTexture(GL_TEXTURE1);
+	glDisable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0);
+}
+
+
 /*
 ================
 DrawGLPoly
 ================
 */
 
-void DrawGLPoly (glpoly_t *p)
+void DrawGLPoly (glpoly_t *p, float intensity, float alpha_val)
 {
 #ifdef _3DS
 	static ir_vert_t *vert;
@@ -460,27 +762,19 @@ void DrawGLPoly (glpoly_t *p)
 	static unsigned short indexes[68 * 3];
 	int		i;
 	float	*v;
-	float fade;
 	int index;
 
-#if 1
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
+	//alpha_val = 1.0f;
 
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	vert = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
+#ifdef WIN32
 	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), vert->xyz);
 	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), vert->n);
 	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), vert->c);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), vert->st);
+#endif
+
+#ifdef _3DS
+	vert = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
 #endif
 
 	v = p->verts[0];
@@ -491,13 +785,14 @@ void DrawGLPoly (glpoly_t *p)
 		vert[i].xyz[0] = v[0];
 		vert[i].xyz[1] = v[1];
 		vert[i].xyz[2] = v[2];
-		fade = 1.0f;// (float)FadedLighting(vert[i].xyz[0], vert[i].xyz[1], light) / 255.0f;
-		vert[i].c[0] = fade;
-		vert[i].c[1] = fade;
-		vert[i].c[2] = fade;
-		vert[i].c[3] = 1.0f;
+		vert[i].c[0] = intensity;
+		vert[i].c[1] = intensity;
+		vert[i].c[2] = intensity;
+		vert[i].c[3] = alpha_val;
 		vert[i].st[0] = v[3];
 		vert[i].st[1] = v[4];
+		vert[i].uv[0] = v[5];
+		vert[i].uv[1] = v[6];
 	}
 	index = 0;
 	for (i = 2; i < p->numverts; i++) {
@@ -509,7 +804,6 @@ void DrawGLPoly (glpoly_t *p)
 
 #ifdef _3DS
 	glDrawElementsBaseVertex(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes, ir_vbo_base_vertex);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 #else
 	glDrawElements(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes);
 #endif
@@ -517,11 +811,7 @@ void DrawGLPoly (glpoly_t *p)
 	ir_vbo_base_vertex += p->numverts;
 
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-#else
+#if 0
 	// hack
 //	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBegin (GL_POLYGON);
@@ -545,6 +835,22 @@ R_BlendLightmaps
 */
 void R_BlendLightmaps (qboolean Translucent)
 {
+#if 1
+	int i;
+	for (i = 0; i<MAX_LIGHTMAPS; i++)
+	{
+		if (lightmap_modified[i])
+		{
+			GL_Bind(lightmap_textures + i);
+			//void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid * data) {
+			glTexImage2D(
+				GL_TEXTURE_2D, 0, gl_lightmap_format,
+				BLOCK_WIDTH, BLOCK_HEIGHT, 0,
+				gl_lightmap_format, GL_UNSIGNED_BYTE, lightmaps + i*BLOCK_WIDTH*BLOCK_HEIGHT*lightmap_bytes);
+			lightmap_modified[i] = false;
+		}
+	}
+#else
 	int			i, j;
 	glpoly_t	*p;
 	float		*v;
@@ -619,6 +925,7 @@ void R_BlendLightmaps (qboolean Translucent)
 
 	if (!Translucent)
 		glDepthMask (1);		// back to normal Z buffering
+#endif
 }
 
 /*
@@ -682,14 +989,29 @@ void R_RenderBrushPoly (msurface_t *fa, qboolean override)
 
 	if (fa->flags & SURF_DRAWTURB)
 	{	// warp texture, no lightmaps
-		EmitWaterPolys (fa);
+		EmitWaterPolys (fa, 1.0f, r_wateralpha.value);
 		return;
 	}
 
-	if (fa->flags & SURF_UNDERWATER)
-		DrawGLWaterPoly (fa->polys);
-	else
-		DrawGLPoly (fa->polys);
+	glActiveTexture(GL_TEXTURE1);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, lightmap_textures + fa->lightmaptexturenum);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_ONE_MINUS_SRC_ALPHA);
+	glActiveTexture(GL_TEXTURE0);
+
+
+	if (fa->flags & SURF_UNDERWATER) {
+		DrawGLWaterPoly(fa->polys, intensity, alpha_val);
+	} else {
+		DrawGLPoly(fa->polys, intensity, alpha_val);
+	}
+
+	glActiveTexture(GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_PRIMARY_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
+	glDisable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0);
 
 	// add the poly to the proper lightmap chain
 
@@ -1100,9 +1422,7 @@ void R_DrawWorld (void)
 	if (gl_texsort.value)
 		DrawTextureChains ();
 
-#ifndef WIN32
 	R_BlendLightmaps (false);
-#endif
 
 #ifdef QUAKE2
 	R_DrawSkyBox ();
@@ -1231,8 +1551,9 @@ void BuildSurfaceDisplayList (msurface_t *fa)
 	float		*vec;
 	float		s, t;
 	glpoly_t	*poly;
+	float fade;
 
-// reconstruct the polygon
+	// reconstruct the polygon
 	pedges = currentmodel->edges;
 	lnumverts = fa->numedges;
 	vertpage = 0;
@@ -1355,6 +1676,79 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	R_BuildLightMap (surf, base, BLOCK_WIDTH*lightmap_bytes);
 }
 
+void BuildSurface(glpoly_t *p)
+{
+#ifdef _3DS
+	static ir_vert_t *vert;
+#else
+	static ir_vert_t vert[200];
+#endif
+	static unsigned short indexes[68 * 3];
+	int		i;
+	float	*v;
+	float fade;
+	int index;
+
+#ifdef WIN32
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), vert->xyz);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), vert->n);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), vert->c);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), vert->st);
+#endif
+
+#ifdef _3DS
+	vert = (ir_vert_t *)glMapBufferRange(GL_ARRAY_BUFFER, ir_vbo_base_vertex*sizeof(ir_vert_t), 4 * sizeof(ir_vert_t), GL_MAP_WRITE_BIT);
+#endif
+
+	v = p->verts[0];
+	for (i = 0; i<p->numverts; i++, v += VERTEXSIZE) {
+		vert[i].n[0] = 1;
+		vert[i].n[2] = 1;
+		vert[i].n[1] = 1;
+		vert[i].xyz[0] = v[0];
+		vert[i].xyz[1] = v[1];
+		vert[i].xyz[2] = v[2];
+		fade = 1.0f;// (float)FadedLighting(vert[i].xyz[0], vert[i].xyz[1], light) / 255.0f;
+		vert[i].c[0] = fade;
+		vert[i].c[1] = fade;
+		vert[i].c[2] = fade;
+		vert[i].c[3] = 1.0f;
+		vert[i].st[0] = v[3];
+		vert[i].st[1] = v[4];
+	}
+	index = 0;
+	for (i = 2; i < p->numverts; i++) {
+		indexes[index + 0] = 0;
+		indexes[index + 1] = i - 1;
+		indexes[index + 2] = i;
+		index += 3;
+	}
+
+#ifdef _3DS
+	glDrawElementsBaseVertex(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes, ir_vbo_base_vertex);
+#else
+	glDrawElements(GL_TRIANGLES, index, GL_UNSIGNED_SHORT, indexes);
+#endif
+
+	ir_vbo_base_vertex += p->numverts;
+
+
+#if 0
+	// hack
+	//	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glBegin(GL_POLYGON);
+	v = p->verts[0];
+	for (i = 0; i<p->numverts; i++, v += VERTEXSIZE)
+	{
+		// hack
+		//		glColor3f( 1.0f, 0.0f, 0.0f );
+		glTexCoord2f(v[3], v[4]);
+		glVertex3fv(v);
+	}
+	glEnd();
+#endif
+}
+
 
 /*
 ==================
@@ -1400,10 +1794,10 @@ void GL_BuildLightmaps (void)
 	case GL_RGBA4:
 		lightmap_bytes = 2;
 		break;
+	case GL_ALPHA:
 	case GL_LUMINANCE:
 #ifdef WIN32
 	case GL_INTENSITY:
-	case GL_ALPHA:
 #endif
 		lightmap_bytes = 1;
 		break;
@@ -1418,6 +1812,7 @@ void GL_BuildLightmaps (void)
 			continue;
 		r_pcurrentvertbase = m->vertexes;
 		currentmodel = m;
+
 		for (i=0 ; i<m->numsurfaces ; i++)
 		{
 			GL_CreateSurfaceLightmap (m->surfaces + i);
@@ -1427,9 +1822,12 @@ void GL_BuildLightmaps (void)
 			if ( m->surfaces[i].flags & SURF_DRAWSKY )
 				continue;
 #endif
+
 			BuildSurfaceDisplayList (m->surfaces + i);
+
 		}
 	}
+	//glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
 
 	//
 	// upload all lightmaps that were filled

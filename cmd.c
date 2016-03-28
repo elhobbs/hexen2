@@ -76,6 +76,8 @@ Adds command text at the end of the buffer
 void Cbuf_AddText (char *text)
 {
 	int		l;
+
+	printf("Cbuf_AddText: %s\n", text);
 	
 	l = strlen (text);
 
@@ -171,7 +173,7 @@ void Cbuf_Execute (void)
 
 // execute the command line
 		Cmd_ExecuteString (line, src_command);
-		printf("Cmd_ExecuteString - done\n");
+		//printf("Cmd_ExecuteString - done\n");
 		
 		if (cmd_wait)
 		{	// skip out while text still remains in buffer, leaving it
@@ -636,7 +638,7 @@ void	Cmd_ExecuteString (char *text, cmd_source_t src)
 	cmd_function_t	*cmd;
 	cmdalias_t		*a;
 
-	printf("Cmd_ExecuteString: %s %d\n", text, src);
+	//printf("Cmd_ExecuteString: %s %d\n", text, src);
 
 	cmd_source = src;
 	Cmd_TokenizeString (text);

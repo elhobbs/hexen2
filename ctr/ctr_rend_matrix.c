@@ -18,6 +18,7 @@ void glLoadIdentity() {
 		return;
 	}
 	m4x4_identity(mat);
+	ctr_state.dirty_matrix = 1;
 }
 
 
@@ -40,6 +41,7 @@ void glPopMatrix() {
 		return;
 	}
 	ctr_state.matrix_depth[mode]--;
+	ctr_state.dirty_matrix = 1;
 }
 
 void glTranslatef(GLfloat x, GLfloat y, GLfloat z) {
@@ -50,6 +52,7 @@ void glTranslatef(GLfloat x, GLfloat y, GLfloat z) {
 		return;
 	}
 	m4x4_translate(mat, x, y, z);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glScalef(GLfloat x, GLfloat y, GLfloat z) {
@@ -60,6 +63,7 @@ void glScalef(GLfloat x, GLfloat y, GLfloat z) {
 		return;
 	}
 	m4x4_scale(mat, x, y, z);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glRotateX(float angle) {
@@ -70,6 +74,7 @@ void glRotateX(float angle) {
 		return;
 	}
 	m4x4_rotate_x(mat, angle*M_PI / 180.0f, true);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glRotateY(float angle) {
@@ -80,6 +85,7 @@ void glRotateY(float angle) {
 		return;
 	}
 	m4x4_rotate_y(mat, angle*M_PI / 180.0f, true);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glRotateZ(float angle) {
@@ -90,6 +96,7 @@ void glRotateZ(float angle) {
 		return;
 	}
 	m4x4_rotate_z(mat, angle*M_PI / 180.0f, true);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z) {
@@ -100,6 +107,7 @@ void glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z) {
 		return;
 	}
 	m4x4_rotate(mat, angle, x, y, z, true);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glLoadMatrixf(const GLfloat *m) {
@@ -110,6 +118,7 @@ void glLoadMatrixf(const GLfloat *m) {
 		return;
 	}
 	memcpy(mat->m,m,sizeof(float)*16);
+	ctr_state.dirty_matrix = 1;
 }
 
 #endif //end MATRX stuff
@@ -123,6 +132,7 @@ void ctr_rend_matrix_init() {
 	m4x4_identity(&ctr_state.matrix[0][0]);
 	m4x4_identity(&ctr_state.matrix[1][0]);
 	m4x4_identity(&ctr_state.matrix[2][0]);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar) {
@@ -159,6 +169,7 @@ void glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdou
 	mp2.r[1].x = -1.0; // flipped
 	mp2.r[1].y = 0.0;
 	m4x4_multiply(mat, &mp2, &mp3);
+	ctr_state.dirty_matrix = 1;
 }
 
 void glViewport(GLint x, GLint y, GLsizei width, GLsizei height) {

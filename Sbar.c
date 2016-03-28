@@ -261,12 +261,16 @@ void SB_Draw(void)
 	scr_copyeverything = 1;
 	sb_updates++;
 
-
+#if 1
 	if(BarHeight < 0)
 		DrawFullScreenInfo();
+#endif
 
 	//Sbar_DrawPic(0, 0, Draw_CachePic("gfx/topbar.lmp"));
 	Sbar_DrawPic(0, 0, Draw_CachePic("gfx/topbar1.lmp"));
+
+	//return;
+
 	Sbar_DrawPic(160, 0, Draw_CachePic("gfx/topbar2.lmp"));
 	Sbar_DrawTransPic(0, -23, Draw_CachePic("gfx/topbumpl.lmp"));
 	Sbar_DrawTransPic(138, -8, Draw_CachePic("gfx/topbumpm.lmp"));

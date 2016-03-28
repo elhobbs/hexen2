@@ -383,7 +383,7 @@ void Con_Printf (char *fmt, ...)
 	
 // also echo to debugging console
 	Sys_Printf ("%s", msg);	// also echo to debugging console
-	return;
+	//return;
 
 // log all messages to file
 	if (con_debuglog)

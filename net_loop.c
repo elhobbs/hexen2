@@ -141,7 +141,7 @@ int Loop_SendMessage (qsocket_t *sock, sizebuf_t *data)
 	if (!sock->driverdata)
 		return -1;
 
-	printf("Loop_SendMessage\n");
+	//printf("Loop_SendMessage\n");
 
 	bufferLength = &((qsocket_t *)sock->driverdata)->receiveMessageLength;
 

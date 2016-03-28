@@ -11,13 +11,6 @@
 #include "3dmath.h"
 #endif
 
-typedef struct {
-	float xyz[3];
-	float n[3];
-	float c[4];
-	float st[2];
-} ir_vert_t;
-
 extern int ir_vbo_base_vertex;
 extern int ir_vbo;
 
@@ -43,7 +36,7 @@ mplane_t	frustum[4];
 int			c_brush_polys, c_alias_polys, c_sky_polys;
 
 qboolean	envmap;				// true during envmap command capture 
-int			currenttexture;		// to avoid unnecessary texture sets
+int			currenttexture = -1;		// to avoid unnecessary texture sets
 
 int			particletexture;	// little dot for particles
 int			playertextures;		// up to 16 color translated skins
@@ -519,7 +512,7 @@ void GL_DrawAliasFrame (aliashdr_t *paliashdr, int posenum)
 #else
 	static ir_vert_t vert[200];
 #endif
-	static unsigned short indexes[1000*3]; //not sure how big this needs to be
+	static unsigned short indexes[65536]; //not sure how big this needs to be
 	float	s, t;
 	float 	l;
 	int		i, j;
@@ -532,6 +525,13 @@ void GL_DrawAliasFrame (aliashdr_t *paliashdr, int posenum)
 	int		count;
 	float	r,g,b,p;
 	GLenum  mode;
+
+#ifdef WIN32
+	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), vert->xyz);
+	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), vert->n);
+	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), vert->c);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), vert->st);
+#endif
 
 lastposenum = posenum;
 
@@ -549,24 +549,6 @@ lastposenum = posenum;
 		r = g = b = 1;
 
 #if 1
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), 0);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), 12);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), 24);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 40);
-#else
-	glVertexPointer(3, GL_FLOAT, sizeof(ir_vert_t), vert->xyz);
-	glNormalPointer(GL_FLOAT, sizeof(ir_vert_t), vert->n);
-	glColorPointer(4, GL_FLOAT, sizeof(ir_vert_t), vert->c);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), vert->st);
-#endif
-
 
 	while (1)
 	{
@@ -641,14 +623,6 @@ lastposenum = posenum;
 
 		ir_vbo_base_vertex += count;
 	}
-
-#ifdef _3DS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
 
 #else
 
@@ -1017,6 +991,7 @@ void R_DrawAliasModel (entity_t *e)
 		if (gl_extra_textures[currententity->skinnum-100] == -1)  // Need to load it in
 		{
 			sprintf(temp,"gfx/skin%d.lmp",currententity->skinnum);
+			//printf("Draw_CachePic: %s\n", temp);
 			stonepic = Draw_CachePic(temp);
 			gl = (glpic_t *)stonepic->data;
 			gl_extra_textures[currententity->skinnum-100] = gl->texnum;
@@ -1026,7 +1001,10 @@ void R_DrawAliasModel (entity_t *e)
 	}
 	else
 	{
+		//printf("%s %d %d\n", currententity->model->name, currententity->skinnum, paliashdr->gl_texturenum[currententity->skinnum]);
 		GL_Bind(paliashdr->gl_texturenum[currententity->skinnum]);
+#ifdef _3DS
+#endif
 
 		// we can't dynamically colormap textures, so they are cached
 		// seperately for the players.  Heads are just uncolored.
@@ -1137,6 +1115,7 @@ void R_DrawEntitiesOnList (void)
 
 		switch (currententity->model->type)
 		{
+#if 1
 		case mod_alias:
 			item_trans = ((currententity->drawflags & DRF_TRANSLUCENT) ||
 						  (currententity->model->flags & (EF_TRANSPARENT|EF_HOLEY|EF_SPECIAL_TRANS))) != 0;
@@ -1144,7 +1123,7 @@ void R_DrawEntitiesOnList (void)
 				R_DrawAliasModel (currententity);
 
 			break;
-
+#endif
 		case mod_brush:
 			item_trans = ((currententity->drawflags & DRF_TRANSLUCENT)) != 0;
 			if (!item_trans)
@@ -1659,7 +1638,9 @@ void R_RenderScene ()
 	R_DrawWorld ();		// adds static entities to the list
 
 	S_ExtraUpdate ();	// don't let sound get messed up if going slow
+
 	
+#if 1
 	R_DrawEntitiesOnList ();
 /*	else
 	{
@@ -1673,6 +1654,7 @@ void R_RenderScene ()
 	{
 		Test_Draw ();
 	}
+#endif
 #endif
 
 //	glDepthMask( 1 );
@@ -1862,6 +1844,7 @@ void R_RenderView (void)
 
 	// render normal view
 	R_RenderScene ();
+#if 1
 
 	glDepthMask(0);
 
@@ -1871,11 +1854,9 @@ void R_RenderView (void)
 
 	R_DrawTransEntitiesOnList( r_viewleaf->contents == CONTENTS_EMPTY ); // This restores the depth mask
 
-#ifdef WIN32
 	R_DrawWaterSurfaces ();
 
 	R_DrawTransEntitiesOnList( r_viewleaf->contents != CONTENTS_EMPTY );
-#endif
 
 	R_DrawViewModel();
 
@@ -1884,6 +1865,7 @@ void R_RenderView (void)
 	R_Mirror ();
 
 	R_PolyBlend ();
+#endif
 #endif
 
 	if (r_speeds.value)
