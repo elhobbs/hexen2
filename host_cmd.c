@@ -573,19 +573,21 @@ void Host_Savegame_f (void)
 	i = GetTempPath(sizeof(tempdir),tempdir);
 	if (!i) 
 	{
-		sprintf(tempdir,"%s\\",com_savedir);
+		sprintf(tempdir,"%s/",com_savedir);
 	}
 
 	sprintf (name, "%sclients.gip",tempdir);
 	DeleteFile(name);
 
-	sprintf (name, "%s*.gip", tempdir);
+	//sprintf(name, "%s*.gip", tempdir);
+	sprintf(name, "%s", tempdir);
 	sprintf (dest, "%s/%s/",com_savedir, Cmd_Argv(1));
-	Con_Printf ("Saving game to %s...\n", dest);
+	printf ("Saving game to %s...\n", dest);
 
-	error_state = CL_CopyFiles(tempdir, name, dest);
+	error_state = CL_CopyFiles(tempdir, name, dest, ".gip");
 
 	sprintf(dest,"%s/%s/info.dat",com_savedir, Cmd_Argv(1));
+	printf("opening: %s\n", dest);
 	f = fopen (dest, "w");
 	if (!f)
 	{
@@ -670,15 +672,17 @@ void Host_Loadgame_f (void)
 
 	sprintf (name, "%s/%s", com_savedir, Cmd_Argv(1));
 
-	Con_Printf ("Loading game from %s...\n", name);
+	printf ("Loading game from %s...\n", name);
 
 	i = GetTempPath(sizeof(tempdir),tempdir);
 	if (!i) 
 	{
-		sprintf(tempdir,"%s\\",com_savedir);
+		sprintf(tempdir,"%s/",com_savedir);
 	}
 
 	sprintf(dest,"%s/info.dat",name);
+
+	printf("%s\n", dest);
 
 	f = fopen (dest, "r");
 	if (!f)
@@ -753,11 +757,12 @@ void Host_Loadgame_f (void)
 	retry:
 	attempts++;
 
-	sprintf (name, "%s/%s/*.gip", com_savedir, Cmd_Argv(1));
+	//sprintf(name, "%s/%s/*.gip", com_savedir, Cmd_Argv(1));
+	sprintf(name, "%s/%s/", com_savedir, Cmd_Argv(1));
 	sprintf (dest, "%s/%s/",com_savedir, Cmd_Argv(1));
-	strcat(tempdir,"/");
+	//strcat(tempdir,"/");
 
-	error_state = CL_CopyFiles(dest, name, tempdir);
+	error_state = CL_CopyFiles(dest, name, tempdir, ".gip");
 
 	if (error_state)
 	{
@@ -835,7 +840,7 @@ retry:
 
 		sprintf (name, "%s%s.gip", tempdir, sv.name);
 		
-//		Con_Printf ("Saving game to %s...\n", name);
+		Con_Printf ("Saving game to %s...\n", name);
 	}
 
 	f = fopen (name, "w");

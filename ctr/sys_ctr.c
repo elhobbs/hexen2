@@ -195,6 +195,7 @@ int	Sys_FileTime(char *path)
 
 void Sys_mkdir(char *path)
 {
+	printf("Sys_mkdir: %s\n", path);
 	mkdir(path, S_IRWXU);
 }
 

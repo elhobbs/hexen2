@@ -100,17 +100,18 @@ void CL_RemoveGIPFiles (char *path)
 
 	if (path)
 	{
-		sprintf(tempdir, "%s\\", path);
+		sprintf(tempdir, "%s/", path);
 	}
 	else
 	{
 		i = GetTempPath(sizeof(tempdir), tempdir);
 		if (!i)
 		{
-			sprintf(tempdir, "%s\\", com_gamedir);
+			sprintf(tempdir, "%s/", com_gamedir);
 		}
 	}
 
+	printf("CL_RemoveGIPFiles: %s\n", tempdir);
 	dir = opendir(tempdir);
 	if (dir == 0) {
 		return;
@@ -119,8 +120,8 @@ void CL_RemoveGIPFiles (char *path)
 	while ((ent = readdir(dir)) != 0) {
 		len = strlen(ent->d_name);
 		if (len > 4 && strnicmp(ent->d_name + len - 4, ".gip",4) == 0) {
-			sprintf(name, "%s\\%s", com_gamedir, ent->d_name);
-			printf(" removing file: %s\n", name);
+			sprintf(name, "%s/%s", com_gamedir, ent->d_name);
+			printf("%s\n", name);
 			remove(name);
 		}
 	}
@@ -163,16 +164,35 @@ void CL_RemoveGIPFiles (char *path)
 #endif
 }
 
-qboolean CL_CopyFiles(char *source, char *pat, char *dest)
+qboolean CL_CopyFiles(char *source, char *pat, char *dest, char *ext)
 {
 #ifndef WIN32
+	DIR *dir;
+	struct dirent *ent;
+	int len, i;
+	int ext_len = strlen(ext);
+	char namesrc[400];
+	char namedst[400];
+
 	printf("CL_CopyFiles\n");
 	printf("source: %s\n", source);
 	printf("pat: %s\n", pat);
 	printf("dest: %s\n", dest);
-	do {
-		gspWaitForVBlank();
-	} while (1);
+
+	dir = opendir(source);
+	if (dir == 0) {
+		return;
+	}
+
+	while ((ent = readdir(dir)) != 0) {
+		len = strlen(ent->d_name);
+		if (len > ext_len && strnicmp(ent->d_name + len - ext_len, ext, ext_len) == 0) {
+			sprintf(namesrc, "%s%s", source, ent->d_name);
+			sprintf(namedst, "%s%s", dest, ent->d_name);
+			printf("%s -> %s\n", namesrc, namedst);
+			COM_CopyFile(namesrc, namedst);
+		}
+	}
 	return false;
 #else
 	char	name[MAX_OSPATH],tempdir[MAX_OSPATH];
