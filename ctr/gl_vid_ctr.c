@@ -231,7 +231,7 @@ void GL_Init(void)
 	glTexCoordPointer(2, GL_FLOAT, sizeof(ir_vert_t), 48);
 	glClientActiveTexture(GL_TEXTURE0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 #if 0
 
@@ -290,7 +290,7 @@ void keyboard_draw();
 
 void GL_EndRendering(void)
 {
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
 	//if (!scr_skipupdate)
 	//	SwapBuffers(maindc);
 	gpuFrameEnd();

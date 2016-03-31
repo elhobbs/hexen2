@@ -157,7 +157,7 @@ void S_Init (void)
 
 	Cvar_RegisterVariable(&precache);
 
-	return;
+	//return;
 
 	if (COM_CheckParm("-nosound"))
 		return;

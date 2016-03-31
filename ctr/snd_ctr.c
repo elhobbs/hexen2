@@ -1,6 +1,7 @@
 #include "quakedef.h"
 #include <3ds.h>
 #include <3ds/linear.h>
+#include <3ds/ndsp/ndsp.h>
 
 // 64K is > 1 second at 16-bit, 22050 Hz
 #define	WAV_BUFFERS				128
@@ -20,6 +21,9 @@ static int	sample16;
 static int	snd_sent, snd_completed;
 
 static int	gSndBufSize = 0;
+
+static ndspWaveBuf gWavebuf[WAV_BUFFERS];
+static float gMix[12];
 
 
 qboolean SNDDMA_InitDirect(void);
@@ -68,6 +72,13 @@ FreeSound
 */
 void FreeSound(void)
 {
+	if (wav_init == false) {
+		return;
+	}
+	ndspChnWaveBufClear(0);
+	svcSleepThread(20000);
+	ndspExit();
+
 	wav_init = false;
 }
 
@@ -101,6 +112,17 @@ Crappy windows multimedia base
 qboolean SNDDMA_InitWav(void)
 {
 
+	int i;
+
+	shm = &sn;
+
+	shm->channels = 2;
+	shm->samplebits = 16;
+	shm->speed = 11025;
+
+	snd_sent = 0;
+	snd_completed = 0;
+
 	/*
 	* Allocate and lock memory for the waveform data. The memory
 	* for waveform data must be globally allocated with
@@ -117,6 +139,28 @@ qboolean SNDDMA_InitWav(void)
 	}
 	memset(lpData, 0, gSndBufSize);
 
+	ndspInit();
+	ndspChnSetInterp(0, NDSP_INTERP_NONE);
+	ndspChnSetRate(0, 11025.0f);
+	ndspChnSetFormat(0, NDSP_FORMAT_STEREO_PCM16);
+	memset(gWavebuf, 0, sizeof(ndspWaveBuf)*WAV_BUFFERS);
+	memset(gMix, 0, sizeof(gMix));
+
+	DSP_FlushDataCache(lpData, gSndBufSize);
+
+	/* After allocation, set up and prepare headers. */
+	for (i = 0; i<WAV_BUFFERS; i++)
+	{
+		gWavebuf[i].nsamples = WAV_BUFFER_SIZE / (shm->channels * shm->samplebits / 8);
+		gWavebuf[i].looping = false;
+		gWavebuf[i].status = NDSP_WBUF_FREE;
+		gWavebuf[i].data_vaddr = lpData + i*WAV_BUFFER_SIZE;
+		//ch->mix[0] = master_volume * (float)ch->left / 128.0f;
+		//ch->mix[1] = master_volume * (float)ch->right / 128.0f;
+		//ndspChnSetMix(cnum, ch->mix);
+		//ndspChnWaveBufAdd(cnum, &ch->wavebuf);
+	}
+
 	shm->soundalive = true;
 	shm->splitbuffer = false;
 	shm->samples = gSndBufSize / (shm->samplebits / 8);
@@ -124,6 +168,7 @@ qboolean SNDDMA_InitWav(void)
 	shm->submission_chunk = 1;
 	shm->buffer = (unsigned char *)lpData;
 	sample16 = (shm->samplebits / 8) - 1;
+
 
 	wav_init = true;
 
@@ -233,8 +278,12 @@ void SNDDMA_Submit(void)
 
 		//if (!(lpWaveHdr[snd_completed & WAV_MASK].dwFlags & WHDR_DONE))
 		//{
-			break;
+			//break;
 		//}
+
+		if (gWavebuf[snd_completed & WAV_MASK].status != NDSP_WBUF_DONE) {
+			break;
+		}
 
 		snd_completed++;	// this buffer has been played
 	}
@@ -245,6 +294,7 @@ void SNDDMA_Submit(void)
 	while (((snd_sent - snd_completed) >> sample16) < 4)
 	{
 		//h = lpWaveHdr + (snd_sent&WAV_MASK);
+		ndspChnWaveBufAdd(0, gWavebuf + (snd_sent&WAV_MASK));
 
 		snd_sent++;
 		/*

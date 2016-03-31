@@ -120,12 +120,12 @@ void *glMapBufferRange(GLenum target, GLuint offset, GLuint length, GLenum acces
 		break;
 	}
 	if (id == 0) {
-		printf("glMapBufferRange: id == 0\n");
+		printf("glMapBufferRange: id == 0\n%d %d %d %d\n", target, offset, length);
 		return 0;
 	}
 	CTR_BUFFER *buf = ctr_handle_get(CTR_HANDLE_BUFFER, id);
 	if (buf == 0) {
-		printf("glMapBufferRange: buf == 0\n");
+		printf("glMapBufferRange: id == 0\n%d %d %d %d\n", target, offset, length);
 		return 0;
 	}
 	return (buf->data + (u32)offset);

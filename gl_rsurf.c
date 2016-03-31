@@ -13,7 +13,7 @@ int			skytexturenum;
 #endif
 
 int ir_vbo_base_vertex = 0;
-int ir_vbo = 0;;
+int ir_vbo = 0;
 
 #ifdef _3DS
 #define GL_STREAM_DRAW 0
