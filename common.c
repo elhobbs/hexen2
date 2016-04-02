@@ -1667,13 +1667,13 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean override_pa
 					continue;
 			}
 			
-			sprintf (netpath, "%s/%s",search->filename, filename);
-			
+			sprintf(netpath, "%s/%s", search->filename, filename);
+
 			findtime = Sys_FileTime (netpath);
 			if (findtime == -1)
 				continue;
 				
-		// see if the file needs to be updated in the cache
+			// see if the file needs to be updated in the cache
 			if (!com_cachedir[0])
 				strcpy (cachepath, netpath);
 			else
@@ -1744,6 +1744,11 @@ into the file.
 int COM_FOpenFile (char *filename, FILE **file, qboolean override_pack)
 {
 	return COM_FindFile (filename, NULL, file, override_pack);
+}
+
+int COM_FOpenFile2(char *filename, FILE **file)
+{
+	return COM_FindFile(filename, NULL, file, true);
 }
 
 /*

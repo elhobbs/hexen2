@@ -31,9 +31,9 @@ QDIR		:=	$(CURDIR)
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source ctr
+SOURCES		:=	source ctr helix/fixpt helix/fixpt/real helix/fixpt/real/arm
 DATA		:=	data
-INCLUDES	:=	include ctr .
+INCLUDES	:=	include ctr . helix/fixpt/pub
 #ROMFS		:=	romfs
 
 #---------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ CFLAGS	:=	-g -Wall -O2 -mword-relocations \
 			-fomit-frame-pointer -ffunction-sections \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -DARM11 -D_3DS -DGLQUAKE -DRJNET -DQUAKE2RJ
+CFLAGS	+=	$(INCLUDE) -DARM11 -D_3DS -DGLQUAKE -DRJNET -DQUAKE2RJ -DARM
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
