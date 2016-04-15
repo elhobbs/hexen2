@@ -208,6 +208,7 @@ void ctr_rend_vbo_init();
 void ctr_rend_matrix_init();
 void ctr_rend_buffer_init();
 void ctr_rend_init();
+void ctr_rend_texture_init();
 extern CTR_CLIENT_STATE ctr_state;
 
 

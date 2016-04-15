@@ -301,7 +301,7 @@ qpic_t *Draw_PicFromFile (char *name)
 	gl = (glpic_t *)p->data;
 
 	// load little ones into the scrap
-/*	if (p->width < 64 && p->height < 64)
+	if (p->width < 64 && p->height < 64)
 	{
 		int		x, y;
 		int		i, j, k;
@@ -325,7 +325,7 @@ qpic_t *Draw_PicFromFile (char *name)
 		pic_count++;
 		pic_texels += p->width*p->height;
 	}
-	else*/
+	else
 	{
 nonscrap:
 		gl->texnum = GL_LoadPicTexture (p);
@@ -537,6 +537,8 @@ void Draw_TextureMode_f (void)
 
 static	unsigned	*trans = 0;// [640 * 480]; 	// FIXME, temporary
 
+void waitforitgl(char *text);
+
 /*
 ===============
 Draw_Init
@@ -601,6 +603,7 @@ void Draw_Init (void)
 		if (mf->data[i] == 0)
 			mf->data[i] = 255;	// proper transparent color
 
+	//waitforitgl("menufont");
 
 	char_menufonttexture = GL_LoadTexture ("menufont", 160, 80, mf->data, false, true, 0);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -613,6 +616,7 @@ void Draw_Init (void)
 
 	// hack the version number directly into the pic
 
+	waitforitgl("char to conback");
 	dest = cb->data + 320 - 43 + 320*186;
 	sprintf (ver, "%4.2f", HEXEN2_VERSION);
 
@@ -622,6 +626,7 @@ void Draw_Init (void)
 	for (x=0 ; x<y ; x++)
 		Draw_CharToConback (ver[x], dest+(x<<3));
 
+	//waitforitgl("conback");
 	gl = (glpic_t *)conback->data;
 	gl->texnum = GL_LoadTexture ("conback", cb->width, cb->height, cb->data, false, false, 0);
 	gl->sl = 0;
@@ -642,18 +647,20 @@ void Draw_Init (void)
 	scrap_texnum = texture_extension_number;
 	texture_extension_number += MAX_SCRAPS;
 
+	//waitforitgl("skull");
 	//
 	// get the other pics we need
 	//
 	for(i=MAX_DISC-1;i>=0;i--)
 	{
 		sprintf(temp,"gfx/menu/skull%d.lmp",i);
-		draw_disc[i] = Draw_PicFromFile (temp);
+		draw_disc[i] = 0;// Draw_PicFromFile(temp);
 	}
 
 //	draw_disc = Draw_PicFromWad ("disc");
 //	draw_backtile = Draw_PicFromWad ("backtile");
-	draw_backtile = Draw_PicFromFile ("gfx/menu/backtile.lmp");
+	draw_backtile = 0;// Draw_PicFromFile("gfx/menu/backtile.lmp");
+	//waitforitgl("drawinit complete");
 }
 
 
@@ -884,7 +891,7 @@ void Draw_SmallCharacter (int x, int y, int num)
 	memcpy(verts[2].c, light, 16);
 
 	verts[3].xyz[0] = x;
-	verts[3].xyz[1] = YPOS(y + 20);
+	verts[3].xyz[1] = YPOS(y + 8);
 	verts[3].xyz[2] = 0;
 	verts[3].st[0] = fcol;
 	verts[3].st[1] = frow + ysize;

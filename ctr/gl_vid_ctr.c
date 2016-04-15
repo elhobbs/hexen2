@@ -268,6 +268,8 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 {
 	extern cvar_t gl_clear;
 
+	//printf("GL_BeginRendering\n");
+
 	currenttexture = -1;
 
 	x_3ds = y_3ds = 0;
@@ -283,6 +285,20 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 
 	glBindBuffer(GL_ARRAY_BUFFER, ir_vbo);
 
+	glColor4f(1, 1, 1, 1);
+
+	glActiveTexture(GL_TEXTURE1);
+	glDisable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0);
+	glEnable(GL_TEXTURE_2D);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+
 }
 
 void keyboard_draw();
@@ -290,6 +306,7 @@ void keyboard_draw();
 
 void GL_EndRendering(void)
 {
+	//printf("GL_EndRendering\n");
 	//glBindBuffer(GL_ARRAY_BUFFER, 0);
 	//if (!scr_skipupdate)
 	//	SwapBuffers(maindc);

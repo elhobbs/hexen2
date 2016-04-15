@@ -4,6 +4,48 @@
 #include <3ds.h>
 #endif
 
+#if 1
+#include <malloc.h>
+#include "dlmalloc.h"
+
+static mspace tex_msp = 0;
+#define MEM_SPACE_SIZE (18 * 1024 * 1024)
+static void *tex_msp_base;
+
+void ctr_rend_texture_init() {
+	void *mem = linearMemAlign(MEM_SPACE_SIZE, 0x80);
+	tex_msp = create_mspace_with_base(mem, MEM_SPACE_SIZE, 0);
+	mspace_track_large_chunks(tex_msp, 1);
+
+	tex_msp_base = mem;
+}
+
+void* texAlloc(size_t size, size_t alignment) {
+	void *p;
+	p = mspace_memalign(tex_msp, alignment, size);
+	if (p == 0) {
+		printf("out of texture memory %d\n", size);
+		while (p == 0) {
+			svcSleepThread(20000);
+		}
+	}
+	return  p;
+}
+
+void texFree(void *p) {
+	mspace_free(tex_msp, p);
+}
+
+#else
+
+void ctr_rend_texture_init() {
+}
+#define texAlloc(a,b) linearMemAlign((a),(b))
+#define texFree(a) linearFree(a)
+
+#endif
+
+
 void glGenTextures(GLsizei n, GLuint * textures) {
 	if (n <= 0 || textures == 0) {
 		return;
@@ -50,13 +92,6 @@ static void myGPU_SetTexture(GPU_TEXUNIT unit, u32 data, u16 width, u16 height, 
 	switch (unit)
 	{
 	case GPU_TEXUNIT0:
-		/*GPU_SetTexEnv(0,
-			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
-			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
-			GPU_TEVOPERANDS(0, 0, 0),
-			GPU_TEVOPERANDS(0, 0, 0),
-			GPU_MODULATE, GPU_MODULATE,
-			0xFFFFFFFF);*/
 		GPUCMD_AddWrite(GPUREG_TEXUNIT0_TYPE, icolor);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT0_ADDR1, (data) >> 3);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT0_DIM, (iwidth << 16) | iheight);
@@ -64,13 +99,6 @@ static void myGPU_SetTexture(GPU_TEXUNIT unit, u32 data, u16 width, u16 height, 
 		break;
 
 	case GPU_TEXUNIT1:
-		/*GPU_SetTexEnv(0,
-			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_TEXTURE1, GPU_PRIMARY_COLOR),
-			GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
-			GPU_TEVOPERANDS(0, GPU_TEVOP_RGB_ONE_MINUS_SRC_ALPHA, 0),
-			GPU_TEVOPERANDS(0, 0, 0),
-			GPU_MODULATE, GPU_MODULATE,
-			0xFFFFFFFF);*/
 		GPUCMD_AddWrite(GPUREG_TEXUNIT1_TYPE, icolor);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT1_ADDR, (data) >> 3);
 		GPUCMD_AddWrite(GPUREG_TEXUNIT1_DIM, (iwidth << 16) | iheight);
@@ -87,28 +115,10 @@ static void myGPU_SetTexture(GPU_TEXUNIT unit, u32 data, u16 width, u16 height, 
 #endif
 }
 
-void waitforitgl(char *text) {
-#if 1
-	printf(text);
-	printf("\npress A...");
-	do {
-		scanKeys();
-		gspWaitForEvent(GSPGPU_EVENT_VBlank0, false);
-	} while ((keysDown() & KEY_A) == 0);
-	do {
-		scanKeys();
-		gspWaitForEvent(GSPGPU_EVENT_VBlank0, false);
-	} while ((keysDown() & KEY_A) == KEY_A);
-	printf("done");
-	printf("\n");
-#endif
-}
-
-
 void glBindTexture(GLenum target, GLuint texture) {
 	//printf("bind texture: %d %08x\n", ctr_state.client_texture_current, texture);
 	if (texture == 0) {
-		//printf("binding 0 texture\n");
+		DBGPRINT("binding 0 texture\n");
 		ctr_state.bound_texture[ctr_state.client_texture_current] = 0;
 		return;
 	}
@@ -280,7 +290,7 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 		return;
 	}
 	//printf("glTexImage2D: %d %08x\n", ctr_state.client_texture_current, ctr_state.bound_texture[ctr_state.client_texture_current]);
-	DBGPRINT("bound texture: %d %08x\n", ctr_state.client_texture_current, ctr_state.bound_texture[ctr_state.client_texture_current]);
+	DBGPRINT("bound texture: %d %08x\n%08x %d %d\n", ctr_state.client_texture_current, ctr_state.bound_texture[ctr_state.client_texture_current], data, width, height);
 	CTR_TEXTURE *tx = ctr_handle_get(CTR_HANDLE_TEXTURE, ctr_state.bound_texture[ctr_state.client_texture_current]);
 	if (target != GL_TEXTURE_2D || tx == 0) {
 		return;
@@ -344,17 +354,18 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 	//release the old buffer if it is different size
 	if (tx->data && (tx->size != _size)) {
 		tex_image_alloc -= _size;
-		linearFree(tx->data);
+		texFree(tx->data);
 		tx->data = 0;
 		tx->size = 0;
 		DBGPRINT("===================\n  freeing texture\n");
 	}
 
+	DBGPRINT("%d %d %d %d %d\n", tx->data, tx->size, tx->width, tx->height, _size);
 	//create a new buffer if needed
 	if (tx->data == 0) {
-		printf("tx->data = linearMemAlign(%d)\n", _size);
-		printf("used: %d free: %d\n", tex_image_alloc, linearSpaceFree());
-		tx->data = (GLubyte *)linearMemAlign(_size, 0x80);
+		//printf("tx->data = linearMemAlign(%d) %d %d\n%04x %04x\n", _size, width, height, type, internalFormat);
+		//printf("used: %d free: %d\n", tex_image_alloc, linearSpaceFree());
+		tx->data = (GLubyte *)texAlloc(_size, 0x80);
 		if (tx->data == 0) {
 			printf("glTexImage2D: failed to allocate %d\n", _size);
 			do {
@@ -385,8 +396,7 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
 			copy_tex_rgba_4444(tx, data, width, height);
 			break;
 		case GL_LUMINANCE:
-			copy_tex_8_8(tx, data, width, height);
-			break;
+		case GL_ALPHA:
 		case GL_LUMINANCE_ALPHA:
 			copy_tex_8_8(tx, data, width, height);
 			break;
@@ -480,8 +490,7 @@ void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, G
 			copy_tex_sub_rgba_4444(tx, pixels, xoffset, yoffset, width, height);
 			break;
 		case GL_LUMINANCE:
-			copy_tex_sub_8_8(tx, pixels, xoffset, yoffset, width, height);
-			break;
+		case GL_ALPHA:
 		case GL_LUMINANCE_ALPHA:
 			copy_tex_sub_8_8(tx, pixels, xoffset, yoffset, width, height);
 			break;
@@ -510,3 +519,4 @@ void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, G
 		);
 #endif
 }
+

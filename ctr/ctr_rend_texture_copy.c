@@ -1,3 +1,6 @@
+#ifdef _3DS
+#include <3ds.h>
+#endif
 #include "ctr_rend.h"
 
 u32 morton_lut[] = {
@@ -455,7 +458,7 @@ void copy_tex_rgba_5551(CTR_TEXTURE *dst, u8 *src, int width, int height) {
 
 void copy_tex_block_rgba_4444(u8 *src, u8 *_dst, int stride) {
 	int x, y, z;
-	u8 dst[64 * 2];
+	u16 dst[64];
 	for (y = 0; y < 8; y++) {
 		u8 *row_src = src;
 
@@ -494,6 +497,23 @@ void copy_tex_block_rgba_4444(u8 *src, u8 *_dst, int stride) {
 		src += stride;
 	}
 	memcpy(_dst, dst, 64 * 2);
+}
+
+void waitforitgl(char *text) {
+#if 0
+	printf(text);
+	printf("\npress A...");
+	do {
+		scanKeys();
+		gspWaitForEvent(GSPGPU_EVENT_VBlank0, false);
+	} while ((keysDown() & KEY_A) == 0);
+	do {
+		scanKeys();
+		gspWaitForEvent(GSPGPU_EVENT_VBlank0, false);
+	} while ((keysDown() & KEY_A) == KEY_A);
+	printf("done");
+	printf("\n");
+#endif
 }
 
 void copy_tex_rgba_4444(CTR_TEXTURE *dst, u8 *src, int width, int height) {

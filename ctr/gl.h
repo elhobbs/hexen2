@@ -40,11 +40,10 @@ typedef void GLvoid;
 
 #define GL_VERTEX_SHADER			0x100E
 
-enum {
-	GL_TEXTURE0 = 0x100F,
-	GL_TEXTURE1 = 0x1010,
-	GL_TEXTURE2 = 0x1011
-};
+#define GL_TEXTURE0					0x100F
+#define GL_TEXTURE1					0x1010
+#define GL_TEXTURE2					0x1011
+
 
 enum {
 	GL_VERTEX_ARRAY = 1,

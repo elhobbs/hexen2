@@ -706,38 +706,35 @@ void EmitBothSkyLayers(msurface_t *fa)
 
 	glColor4f(0.4f, 0.4f, 0.4f, 0.4f);
 
-	//rgb
-	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_INTERPOLATE);
-
-	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
-
-	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE1);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
-
-	glTexEnvi(GL_TEXTURE_ENV, GL_SRC2_RGB, GL_CONSTANT);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB, GL_SRC_ALPHA);
-
-
-	/*//alpha
-	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_INTERPOLATE);
-	
+	//alpha decal
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
 	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
 	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
 
-	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_ALPHA, GL_TEXTURE1);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, GL_SRC_ALPHA);
+	//rgb interpolate tex0 tex1 by constant
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_INTERPOLATE);
 
-	glTexEnvi(GL_TEXTURE_ENV, GL_SRC2_ALPHA, GL_CONSTANT);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA, GL_CONSTANT);*/
+	//source tex0 text1 constant
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC2_RGB, GL_CONSTANT);
+
+	//rgb interpolate tex0 tex1 rgb by constant alpha
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB, GL_SRC_ALPHA);
+
 
 	//draw pols
 	EmitSkyPolys(fa);
 
 	//reset env
-	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
-	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_PRIMARY_COLOR);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
 
 	//disable texture
 	glActiveTexture(GL_TEXTURE1);
@@ -984,11 +981,19 @@ void R_RenderBrushPoly (msurface_t *fa, qboolean override)
 		return;
 	}
 		
+	glActiveTexture(GL_TEXTURE0);
 	t = R_TextureAnimation (fa->texinfo->texture);
-	GL_Bind (t->gl_texturenum);
+	glBindTexture (GL_TEXTURE_2D, t->gl_texturenum);
 
 	if (fa->flags & SURF_DRAWTURB)
 	{	// warp texture, no lightmaps
+		glActiveTexture(GL_TEXTURE1);
+		glDisable(GL_TEXTURE_2D);
+
+		glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+		glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+		glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+		glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_PRIMARY_COLOR);
 		EmitWaterPolys (fa, 1.0f, r_wateralpha.value);
 		return;
 	}
@@ -996,9 +1001,18 @@ void R_RenderBrushPoly (msurface_t *fa, qboolean override)
 	glActiveTexture(GL_TEXTURE1);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, lightmap_textures + fa->lightmaptexturenum);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_ALPHA, GL_PRIMARY_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, GL_SRC_ALPHA);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
 	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
 	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_ONE_MINUS_SRC_ALPHA);
-	glActiveTexture(GL_TEXTURE0);
 
 
 	if (fa->flags & SURF_UNDERWATER) {
@@ -1008,10 +1022,16 @@ void R_RenderBrushPoly (msurface_t *fa, qboolean override)
 	}
 
 	glActiveTexture(GL_TEXTURE1);
-	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_PRIMARY_COLOR);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 	glDisable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0);
+	glEnable(GL_TEXTURE_2D);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
 
 	// add the poly to the proper lightmap chain
 
@@ -1084,7 +1104,15 @@ void R_DrawWaterSurfaces (void)
     glLoadMatrixf (r_world_matrix);
 
 	glEnable (GL_BLEND);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	glActiveTexture(GL_TEXTURE1);
+	glDisable(GL_TEXTURE_2D);
+
+	glActiveTexture(GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_PRIMARY_COLOR);
 
 	for (i=0 ; i<cl.worldmodel->numtextures ; i++)
 	{
@@ -1103,19 +1131,89 @@ void R_DrawWaterSurfaces (void)
 			glColor4f (1,1,1,1);
 
 		// set modulate mode explicitly
-		GL_Bind (t->gl_texturenum);
+		t = R_TextureAnimation(s->texinfo->texture);
+		GL_Bind(t->gl_texturenum);
 
-		for ( ; s ; s=s->texturechain)
-			R_RenderBrushPoly (s, true);
+		for (; s; s = s->texturechain) {
+			//R_RenderBrushPoly(s, true);
+			EmitWaterPolys(s, 1.0f, r_wateralpha.value);
+		}
 
 		t->texturechain = NULL;
 	}
 
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
 	glColor4f (1,1,1,1);
 	glDisable (GL_BLEND);
-//	glDepthMask( 0 );
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+
+	//	glDepthMask( 0 );
+}
+
+/*
+================
+R_RenderBrushPoly
+================
+*/
+void R_RenderMtexPoly(msurface_t *fa, qboolean override)
+{
+	texture_t	*t;
+	byte		*base;
+	int			maps;
+	float		intensity = 1.0f, alpha_val = 1.0f;
+
+	c_brush_polys++;
+
+	glBindTexture(GL_TEXTURE_2D, lightmap_textures + fa->lightmaptexturenum);
+
+	if (currententity->drawflags & DRF_TRANSLUCENT)
+	{
+		alpha_val = r_wateralpha.value;
+		intensity = 1.0;
+
+	}
+	if ((currententity->drawflags & MLS_ABSLIGHT) == MLS_ABSLIGHT)
+	{
+		intensity = (float)currententity->abslight / 255.0f;
+	}
+
+	if (!override)
+		glColor4f(intensity, intensity, intensity, alpha_val);
+
+
+	if (fa->flags & SURF_UNDERWATER) {
+		DrawGLWaterPoly(fa->polys, intensity, alpha_val);
+	}
+	else {
+		DrawGLPoly(fa->polys, intensity, alpha_val);
+	}
+
+	// add the poly to the proper lightmap chain
+
+	fa->polys->chain = lightmap_polys[fa->lightmaptexturenum];
+	lightmap_polys[fa->lightmaptexturenum] = fa->polys;
+
+	// check for lightmap modification
+	for (maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255;
+	maps++)
+		if (d_lightstylevalue[fa->styles[maps]] != fa->cached_light[maps])
+			goto dynamic;
+
+	if (fa->dlightframe == r_framecount	// dynamic this frame
+		|| fa->cached_dlight)			// dynamic previously
+	{
+	dynamic:
+		if (r_dynamic.value)
+		{
+			lightmap_modified[fa->lightmaptexturenum] = true;
+			base = lightmaps + fa->lightmaptexturenum*lightmap_bytes*BLOCK_WIDTH*BLOCK_HEIGHT;
+			base += fa->light_t * BLOCK_WIDTH * lightmap_bytes + fa->light_s * lightmap_bytes;
+			R_BuildLightMap(fa, base, BLOCK_WIDTH*lightmap_bytes);
+		}
+	}
 }
 
 /*
@@ -1127,18 +1225,33 @@ void DrawTextureChains (void)
 {
 	int		i;
 	msurface_t	*s;
+	msurface_t	*sky = 0;
 	texture_t	*t;
+
+	glActiveTexture(GL_TEXTURE1);
+	glEnable(GL_TEXTURE_2D);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_ONE_MINUS_SRC_ALPHA);
 
 	for (i=0 ; i<cl.worldmodel->numtextures ; i++)
 	{
+		printf(i & 1 ? "." : "o");
 		t = cl.worldmodel->textures[i];
 		if (!t)
 			continue;
 		s = t->texturechain;
 		if (!s)
 			continue;
-		if (i == skytexturenum)
-			R_DrawSkyChain (s);
+		if (i == skytexturenum) {
+			sky = s;
+		}
 		else if (i == mirrortexturenum && r_mirroralpha.value != 1.0)
 		{
 			R_MirrorChain (s);
@@ -1146,14 +1259,41 @@ void DrawTextureChains (void)
 		}
 		else
 		{
-			if ((s->flags & SURF_DRAWTURB) && r_wateralpha.value != 1.0)
+			if ((s->flags & SURF_DRAWTURB) && r_wateralpha.value != 1.0) {
 				continue;	// draw translucent water later
-			for ( ; s ; s=s->texturechain)
-				R_RenderBrushPoly (s, false);
+			}
+
+			glActiveTexture(GL_TEXTURE0);
+			t = R_TextureAnimation(s->texinfo->texture);
+			glBindTexture(GL_TEXTURE_2D, t->gl_texturenum);
+			glActiveTexture(GL_TEXTURE1);
+
+			for (; s; s = s->texturechain) {
+				//R_RenderBrushPoly(s, false);
+				R_RenderMtexPoly(s, false);
+			}
 		}
 
 		t->texturechain = NULL;
 	}
+
+	if (sky) {
+		printf("+");
+		R_DrawSkyChain(sky);
+	}
+	printf("\n");
+
+	glActiveTexture(GL_TEXTURE1);
+	glDisable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+
 }
 
 /*
@@ -1171,6 +1311,7 @@ void R_DrawBrushModel (entity_t *e, qboolean Translucent)
 	mplane_t	*pplane;
 	model_t		*clmodel;
 	qboolean	rotated;
+	texture_t *t;
 
 	currententity = e;
 	currenttexture = -1;
@@ -1241,17 +1382,22 @@ e->angles[2] = -e->angles[2];	// stupid quake bug
 	//
 	for (i=0 ; i<clmodel->nummodelsurfaces ; i++, psurf++)
 	{
-	// find which side of the node we are on
+		// find which side of the node we are on
 		pplane = psurf->plane;
 
 		dot = DotProduct (modelorg, pplane->normal) - pplane->dist;
 
-	// draw the polygon
+		// draw the polygon
 		if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
 			(!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON)))
 		{
-			if (gl_texsort.value)
-				R_RenderBrushPoly (psurf, false);
+			if (gl_texsort.value) {
+				glActiveTexture(GL_TEXTURE0);
+				t = R_TextureAnimation(psurf->texinfo->texture);
+				GL_Bind(t->gl_texturenum);
+				glActiveTexture(GL_TEXTURE1);
+				R_RenderBrushPoly(psurf, false);
+			}
 			else
 				R_DrawSequentialPoly (psurf);
 		}
@@ -1403,25 +1549,31 @@ void R_DrawWorld (void)
 	entity_t	ent;
 	int			i;
 
+	waitforit("memset ent");
 	memset (&ent, 0, sizeof(ent));
 	ent.model = cl.worldmodel;
 
+	waitforit("VectorCopy modelorg");
 	VectorCopy (r_refdef.vieworg, modelorg);
 
 	currententity = &ent;
 	currenttexture = -1;
 
+	waitforit("lightmap_polys");
 	glColor3f (1,1,1);
 	memset (lightmap_polys, 0, sizeof(lightmap_polys));
 #ifdef QUAKE2
 	R_ClearSkyBox ();
 #endif
 
+	waitforit("R_RecursiveWorldNode");
 	R_RecursiveWorldNode (cl.worldmodel->nodes);
 
+	waitforit("DrawTextureChains");
 	if (gl_texsort.value)
 		DrawTextureChains ();
 
+	waitforit("R_BlendLightmaps");
 	R_BlendLightmaps (false);
 
 #ifdef QUAKE2

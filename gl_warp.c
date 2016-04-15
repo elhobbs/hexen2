@@ -286,8 +286,38 @@ void R_DrawSkyChain (msurface_t *s)
 {
 	msurface_t	*fa;
 #if 1
-	for (fa = s; fa; fa = fa->texturechain)
-		EmitBothSkyLayers(fa);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, solidskytexture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, alphaskytexture);
+
+	glColor4f(0.4f, 0.4f, 0.4f, 0.6f);
+
+	//alpha decal
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+
+	//rgb interpolate tex0 tex1 by constant
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_INTERPOLATE);
+
+	//source tex0 text1 constant
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC2_RGB, GL_CONSTANT);
+
+	//rgb interpolate tex0 tex1 rgb by constant alpha
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB, GL_SRC_ALPHA);
+
+
+	for (fa = s; fa; fa = fa->texturechain) {
+		EmitSkyPolys(fa);
+	}
+
 #else
 
 	// used when gl_texsort is on

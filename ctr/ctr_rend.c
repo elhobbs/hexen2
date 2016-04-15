@@ -39,6 +39,8 @@ void ctr_rend_init() {
 
 	ctr_rend_buffer_init();
 
+	ctr_rend_texture_init();
+
 }
 
 
@@ -409,6 +411,7 @@ static void gsSetUniformMatrix(u32 startreg, float* m)
 }
 
 void glDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices, GLint basevertex) {
+	printf("^");
 	DBGPRINT("glDrawElements %08x %d %08x\n", ctr_state.bound_texture[ctr_state.client_texture_current], count, indices);
 	GLuint _mode = -1;
 	switch (mode) {
@@ -452,6 +455,9 @@ void glDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, const GLv
 		default:
 			//bad data do nothing
 			return;
+		}
+		if (cb > 200) {
+			printf("cb: %d\n", cb);
 		}
 		indices = ctr_rend_buffer_copy(indices, cb);
 		if (indices == 0) {
@@ -518,6 +524,7 @@ void glDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, const GLv
 	GPUCMD_AddWrite(GPUREG_DRAWELEMENTS, 0x00000001);
 	GPUCMD_AddMaskedWrite(GPUREG_START_DRAW_FUNC0, 0x1, 0x00000001);
 	GPUCMD_AddWrite(GPUREG_VTX_FUNC, 0x00000001);
+	printf("$");
 #endif
 }
 

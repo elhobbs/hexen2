@@ -940,36 +940,54 @@ void R_DrawAliasModel (entity_t *e)
 //	glScalef (paliashdr->scale[0], paliashdr->scale[1], paliashdr->scale[2]);
 	glScalef (tmatrix[0][0],tmatrix[1][1],tmatrix[2][2]);
 
+
+	//set texenv
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_PRIMARY_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_ALPHA, GL_PRIMARY_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, GL_SRC_ALPHA);
+
 	if ((currententity->model->flags & EF_SPECIAL_TRANS))
 	{
 		// rjr
-		glEnable (GL_BLEND);
-		glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
-//		glColor3f( 1,1,1);
+		//glEnable (GL_BLEND);
+		//glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+		//glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_ONE_MINUS_SRC_ALPHA);
+		//		glColor3f( 1,1,1);
 		model_constant_alpha = 1.0f;
 		glDisable( GL_CULL_FACE );
 	}
 	else if (currententity->drawflags & DRF_TRANSLUCENT)
 	{
 		// rjr
-		glEnable (GL_BLEND);
-		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//		glColor4f( 1,1,1,r_wateralpha.value);
+		//glEnable (GL_BLEND);
+		//glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+		//glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_ONE_MINUS_SRC_ALPHA);
+		//		glColor4f( 1,1,1,r_wateralpha.value);
 		model_constant_alpha = r_wateralpha.value;
 	}
 	else if ((currententity->model->flags & EF_TRANSPARENT))
 	{
 		// rjr
-		glEnable (GL_BLEND);
-		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//		glColor3f( 1,1,1);
+		//glEnable (GL_BLEND);
+		//glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+		//glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_ONE_MINUS_SRC_ALPHA);
+		//		glColor3f( 1,1,1);
 		model_constant_alpha = 1.0f;
 	}
 	else if ((currententity->model->flags & EF_HOLEY))
 	{
 		// rjr
-		glEnable (GL_BLEND);
-		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		//glEnable (GL_BLEND);
+		//glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+		//glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_ONE_MINUS_SRC_ALPHA);
 
 //		glColor3f( 1,1,1);
 		model_constant_alpha = 1.0f;
@@ -977,8 +995,9 @@ void R_DrawAliasModel (entity_t *e)
 	else
 	{
 		// rjr
-		glColor3f( 1,1,1);
+		//glColor3f( 1,1,1);
 		model_constant_alpha = 1.0f;
+		//glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 	}
 
 	if (currententity->skinnum >= 100)
@@ -1057,6 +1076,13 @@ void R_DrawAliasModel (entity_t *e)
 	if (gl_affinemodels.value)
 		glHint (GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 #endif
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
 
 	glPopMatrix ();
 
@@ -1151,6 +1177,18 @@ void R_DrawEntitiesOnList (void)
 				cl_transwateredicts[cl_numtranswateredicts++].ent = currententity;
 		}
 	}
+	//reset env
+	glActiveTexture(GL_TEXTURE1);
+	glDisable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0);
+	glEnable(GL_TEXTURE_2D);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
 }
 
 /*
@@ -1627,26 +1665,33 @@ r_refdef must be set before the first call
 */
 void R_RenderScene ()
 {
+	waitforit("R_SetupFrame");
 	R_SetupFrame ();
 
+	waitforit("R_SetFrustum");
 	R_SetFrustum ();
 
+	waitforit("R_SetupGL");
 	R_SetupGL ();
 
+	waitforit("R_MarkLeaves");
 	R_MarkLeaves ();	// done here so we know if we're in water
 
+	waitforit("R_DrawWorld");
 	R_DrawWorld ();		// adds static entities to the list
 
+	waitforit("S_ExtraUpdate");
 	S_ExtraUpdate ();	// don't let sound get messed up if going slow
 
 	
 #if 1
-	R_DrawEntitiesOnList ();
+	//R_DrawEntitiesOnList ();
 /*	else
 	{
 		glDepthMask( 0 );
 	}*/
 
+	waitforit("R_RenderDlights");
 	R_RenderDlights ();
 
 #if 0
@@ -1658,6 +1703,7 @@ void R_RenderScene ()
 #endif
 
 //	glDepthMask( 1 );
+	waitforit("R_RenderScene done");
 }
 
 
@@ -1840,25 +1886,28 @@ void R_RenderView (void)
 
 //	glFinish ();
 
+	waitforit("R_Clear");
 	R_Clear ();
 
 	// render normal view
+	waitforit("R_RenderScene");
 	R_RenderScene ();
 #if 1
 
+	waitforit("glDepthMask");
 	glDepthMask(0);
 
 #ifdef WIN32
 	R_DrawParticles ();
 #endif
 
-	R_DrawTransEntitiesOnList( r_viewleaf->contents == CONTENTS_EMPTY ); // This restores the depth mask
+	//R_DrawTransEntitiesOnList( r_viewleaf->contents == CONTENTS_EMPTY ); // This restores the depth mask
 
-	R_DrawWaterSurfaces ();
+	//R_DrawWaterSurfaces ();
 
-	R_DrawTransEntitiesOnList( r_viewleaf->contents != CONTENTS_EMPTY );
+	//R_DrawTransEntitiesOnList( r_viewleaf->contents != CONTENTS_EMPTY );
 
-	R_DrawViewModel();
+	//R_DrawViewModel();
 
 #ifdef WIN32
 	// render mirror view
@@ -1870,6 +1919,7 @@ void R_RenderView (void)
 
 	if (r_speeds.value)
 		R_PrintTimes ();
+	waitforit("R_RenderScene done");
 }
 
 /*

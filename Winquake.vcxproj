@@ -141,7 +141,7 @@
     <NMakeBuildCommandLine>make -r 2&gt;&amp;1 | sed -e %27s/\(.[a-zA-Z]\+\):\([0-9]\+\):/\1(\2):/</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>make clean &amp;&amp; make -r 2&gt;&amp;1 | sed -e %27s/\(.[a-zA-Z]\+\):\([0-9]\+\):/\1(\2):/</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>make clean</NMakeCleanCommandLine>
-    <NMakePreprocessorDefinitions>ARM11;_HAVE_STDC;_3DS;GLQUAKE;RJNET;QUAKE2RJ</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>ARM11;_HAVE_STDC;_3DS;GLQUAKE;RJNET;QUAKE2RJ;ONLY_MSPACES;MSPACES;NO_MALLINFO</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath>C:\devkitPro\devkitARM\arm-none-eabi\include;C:\devkitPro\devkitARM\lib\gcc\arm-none-eabi\5.3.0\include;C:\devkitPro\libctru\include;$(ProjectDir);$(ProjectDir)ctr</NMakeIncludeSearchPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='GL Release|Win32'">
@@ -406,6 +406,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GL Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="ctr\ctr_rend_env.c" />
+    <ClCompile Include="ctr\dlmalloc.c" />
     <ClCompile Include="ctr\gl_vid_ctr.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GL Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -991,6 +992,7 @@
     <ClInclude Include="conproc.h" />
     <ClInclude Include="Console.h" />
     <ClInclude Include="Crc.h" />
+    <ClInclude Include="ctr\dlmalloc.h" />
     <ClInclude Include="Cvar.h" />
     <ClInclude Include="Dosisms.h" />
     <ClInclude Include="Draw.h" />

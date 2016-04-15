@@ -55,30 +55,30 @@ void ctr_rend_texenv_op_alpha(GLenum pname, GLuint param) {
 	case GL_OPERAND0_ALPHA:
 		switch (param) {
 		case GL_SRC_ALPHA:
-			ctr_state.texenv_op_alpha0 = GPU_TEVOP_RGB_SRC_ALPHA;
+			ctr_state.texenv_op_alpha0 = GPU_TEVOP_A_SRC_ALPHA;
 			break;
 		case GL_ONE_MINUS_SRC_ALPHA:
-			ctr_state.texenv_op_alpha0 = GPU_TEVOP_RGB_ONE_MINUS_SRC_ALPHA;
+			ctr_state.texenv_op_alpha0 = GPU_TEVOP_A_ONE_MINUS_SRC_ALPHA;
 			break;
 		}
 		break;
 	case GL_OPERAND1_ALPHA:
 		switch (param) {
 		case GL_SRC_ALPHA:
-			ctr_state.texenv_op_alpha1 = GPU_TEVOP_RGB_SRC_ALPHA;
+			ctr_state.texenv_op_alpha1 = GPU_TEVOP_A_SRC_ALPHA;
 			break;
 		case GL_ONE_MINUS_SRC_ALPHA:
-			ctr_state.texenv_op_alpha1 = GPU_TEVOP_RGB_ONE_MINUS_SRC_ALPHA;
+			ctr_state.texenv_op_alpha1 = GPU_TEVOP_A_ONE_MINUS_SRC_ALPHA;
 			break;
 		}
 		break;
 	case GL_OPERAND2_ALPHA:
 		switch (param) {
 		case GL_SRC_ALPHA:
-			ctr_state.texenv_op_alpha2 = GPU_TEVOP_RGB_SRC_ALPHA;
+			ctr_state.texenv_op_alpha2 = GPU_TEVOP_A_SRC_ALPHA;
 			break;
 		case GL_ONE_MINUS_SRC_ALPHA:
-			ctr_state.texenv_op_alpha2 = GPU_TEVOP_RGB_ONE_MINUS_SRC_ALPHA;
+			ctr_state.texenv_op_alpha2 = GPU_TEVOP_A_ONE_MINUS_SRC_ALPHA;
 			break;
 		}
 		break;

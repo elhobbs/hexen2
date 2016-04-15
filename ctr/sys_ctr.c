@@ -273,7 +273,7 @@ void Sys_Init(void)
 void Sys_Error(char *error, ...)
 {
 	va_list		argptr;
-	char		text[1024], text2[1024];
+	static char		text[4096];// , text2[1024];
 	char		*text3 = "Press Enter to exit\n";
 	char		*text4 = "***********************************\n";
 	char		*text5 = "\n";
@@ -282,10 +282,14 @@ void Sys_Error(char *error, ...)
 	vsprintf(text, error, argptr);
 	va_end(argptr);
 
+	printf(text3);
+	printf(text4);
+	printf(text5);
 	printf(text);
-
-	//let it burn!!!
-	while (1);
+	do {
+		svcSleepThread(20000);
+		//let it burn!!!
+	}  while (1);
 
 	Host_Shutdown();
 
@@ -359,8 +363,10 @@ int DeleteFile(char *f) {
 }
 
 void waitforit(char *text) {
-#if 0
+	//printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 	printf(text);
+	printf("\n");
+#if 0
 	printf("\npress A...");
 	do {
 		scanKeys();

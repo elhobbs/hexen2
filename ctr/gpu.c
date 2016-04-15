@@ -141,14 +141,13 @@ void gpuFrameBegin(void)
 		GPU_TEVSOURCES(GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR),
 		GPU_TEVOPERANDS(0, 0, 0),
 		GPU_TEVOPERANDS(0, 0, 0),
-		GPU_MODULATE, GPU_MODULATE,
+		GPU_REPLACE, GPU_REPLACE,
 		0xFFFFFFFF);
 	GPU_SetDummyTexEnv(1);
 	GPU_SetDummyTexEnv(2);
 	GPU_SetDummyTexEnv(3);
 	GPU_SetDummyTexEnv(4);
 	GPU_SetDummyTexEnv(5);
-
 }
 
 

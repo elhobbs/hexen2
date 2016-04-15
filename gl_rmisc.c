@@ -78,14 +78,15 @@ byte	dottexture[16][16] =
 void R_InitParticleTexture (void)
 {
 	int		x,y;
-	byte	texsize = 16;//was 8
-	byte	data[16][16][4];
+	int	texsize = 16;//was 8
+	static byte	data[16][16][4];
 
 	//
 	// particle texture
 	//
 	particletexture = texture_extension_number++;
     GL_Bind(particletexture);
+
 
 	for (x=0 ; x<texsize ; x++)
 	{
@@ -223,6 +224,7 @@ void R_Init (void)
 	Test_Init ();
 #endif
 
+	waitforit("playertextures");
 	playertextures = texture_extension_number;
 	texture_extension_number += 16;
 
