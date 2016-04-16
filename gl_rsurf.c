@@ -6,6 +6,9 @@
 #include "gl.h"
 #endif
 
+void EmitWaterPolys(msurface_t *fa, float intensity, float alpha_val);
+void EmitSkyPolys(msurface_t *fa);
+
 int			skytexturenum;
 
 #ifndef GL_RGBA4
@@ -344,7 +347,7 @@ void R_DrawSequentialPoly (msurface_t *s)
 	if (s->flags & SURF_DRAWTURB)
 	{
 		GL_Bind (s->texinfo->texture->gl_texturenum);
-		EmitWaterPolys (s);
+		EmitWaterPolys (s, 1.0f, r_wateralpha.value);
 		return;
 	}
 
@@ -1091,7 +1094,7 @@ void R_DrawWaterSurfaces (void)
 {
 	int			i;
 	msurface_t	*s;
-	texture_t	*t;
+	texture_t	*t, *t2;
 
 	if (r_wateralpha.value == 1.0)
 		return;
@@ -1131,8 +1134,8 @@ void R_DrawWaterSurfaces (void)
 			glColor4f (1,1,1,1);
 
 		// set modulate mode explicitly
-		t = R_TextureAnimation(s->texinfo->texture);
-		GL_Bind(t->gl_texturenum);
+		t2 = R_TextureAnimation(s->texinfo->texture);
+		GL_Bind(t2->gl_texturenum);
 
 		for (; s; s = s->texturechain) {
 			//R_RenderBrushPoly(s, true);
@@ -1223,10 +1226,10 @@ DrawTextureChains
 */
 void DrawTextureChains (void)
 {
-	int		i;
+	int		i,j;
 	msurface_t	*s;
 	msurface_t	*sky = 0;
-	texture_t	*t;
+	texture_t	*t, *t2;
 
 	glActiveTexture(GL_TEXTURE1);
 	glEnable(GL_TEXTURE_2D);
@@ -1242,7 +1245,7 @@ void DrawTextureChains (void)
 
 	for (i=0 ; i<cl.worldmodel->numtextures ; i++)
 	{
-		printf(i & 1 ? "." : "o");
+		//printf(i & 1 ? "." : "o");
 		t = cl.worldmodel->textures[i];
 		if (!t)
 			continue;
@@ -1264,13 +1267,15 @@ void DrawTextureChains (void)
 			}
 
 			glActiveTexture(GL_TEXTURE0);
-			t = R_TextureAnimation(s->texinfo->texture);
-			glBindTexture(GL_TEXTURE_2D, t->gl_texturenum);
+			t2 = R_TextureAnimation(s->texinfo->texture);
+			glBindTexture(GL_TEXTURE_2D, t2->gl_texturenum);
 			glActiveTexture(GL_TEXTURE1);
 
+			j = 0;
 			for (; s; s = s->texturechain) {
 				//R_RenderBrushPoly(s, false);
 				R_RenderMtexPoly(s, false);
+				j++;
 			}
 		}
 
@@ -1278,10 +1283,9 @@ void DrawTextureChains (void)
 	}
 
 	if (sky) {
-		printf("+");
 		R_DrawSkyChain(sky);
 	}
-	printf("\n");
+	//printf("\n");
 
 	glActiveTexture(GL_TEXTURE1);
 	glDisable(GL_TEXTURE_2D);

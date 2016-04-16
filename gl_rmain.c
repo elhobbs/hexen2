@@ -1685,7 +1685,7 @@ void R_RenderScene ()
 
 	
 #if 1
-	//R_DrawEntitiesOnList ();
+	R_DrawEntitiesOnList ();
 /*	else
 	{
 		glDepthMask( 0 );
@@ -1901,13 +1901,13 @@ void R_RenderView (void)
 	R_DrawParticles ();
 #endif
 
-	//R_DrawTransEntitiesOnList( r_viewleaf->contents == CONTENTS_EMPTY ); // This restores the depth mask
+	R_DrawTransEntitiesOnList( r_viewleaf->contents == CONTENTS_EMPTY ); // This restores the depth mask
 
-	//R_DrawWaterSurfaces ();
+	R_DrawWaterSurfaces ();
 
-	//R_DrawTransEntitiesOnList( r_viewleaf->contents != CONTENTS_EMPTY );
+	R_DrawTransEntitiesOnList( r_viewleaf->contents != CONTENTS_EMPTY );
 
-	//R_DrawViewModel();
+	R_DrawViewModel();
 
 #ifdef WIN32
 	// render mirror view

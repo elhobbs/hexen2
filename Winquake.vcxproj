@@ -188,7 +188,7 @@
     <ClCompile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
       <Optimization>Disabled</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <MinimalRebuild>true</MinimalRebuild>
@@ -405,7 +405,9 @@
     <ClCompile Include="ctr\cd_ctr.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GL Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="ctr\ctr_rend_env.c" />
+    <ClCompile Include="ctr\ctr_rend_env.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GL Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="ctr\dlmalloc.c" />
     <ClCompile Include="ctr\gl_vid_ctr.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GL Debug|Win32'">true</ExcludedFromBuild>

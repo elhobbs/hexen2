@@ -1,6 +1,6 @@
 #include "quakedef.h"
 #include <3ds.h>
-#include <3ds/linear.h>
+#include <3ds/allocator/linear.h>
 #include <3ds/ndsp/ndsp.h>
 
 // 64K is > 1 second at 16-bit, 22050 Hz

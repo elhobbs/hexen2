@@ -77,7 +77,7 @@ void Cbuf_AddText (char *text)
 {
 	int		l;
 
-	printf("Cbuf_AddText: %s\n", text);
+	//printf("Cbuf_AddText: %s\n", text);
 	
 	l = strlen (text);
 

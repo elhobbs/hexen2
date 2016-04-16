@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <3ds/linear.h>
+#include <3ds/allocator/linear.h>
 #include <3ds/ndsp/ndsp.h>
 
 extern "C" int COM_FOpenFile2(char *filename, FILE **file);

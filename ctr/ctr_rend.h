@@ -3,11 +3,11 @@
 #ifdef _3DS
 #include <3ds/types.h>
 #include <3ds/gpu/gpu.h>
-#include <3ds/linear.h>
+#include <3ds/allocator/linear.h>
 #endif
 
 #ifdef _WIN32
-#include "wintypes.h"
+//#include "wintypes.h"
 #endif
 
 #include "3dmath.h"

@@ -363,10 +363,10 @@ int DeleteFile(char *f) {
 }
 
 void waitforit(char *text) {
-	//printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+#if 0
+	printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 	printf(text);
 	printf("\n");
-#if 0
 	printf("\npress A...");
 	do {
 		scanKeys();

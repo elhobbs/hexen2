@@ -174,11 +174,7 @@ void GL_Bind (int texnum)
 	if (currenttexture == texnum)
 		return;
 	currenttexture = texnum;
-#ifdef WIN32
-	bindTexFunc (GL_TEXTURE_2D, texnum);
-#else
 	glBindTexture(GL_TEXTURE_2D, texnum);
-#endif
 }
 
 void GL_Texels_f (void)
@@ -616,7 +612,7 @@ void Draw_Init (void)
 
 	// hack the version number directly into the pic
 
-	waitforitgl("char to conback");
+	//waitforitgl("char to conback");
 	dest = cb->data + 320 - 43 + 320*186;
 	sprintf (ver, "%4.2f", HEXEN2_VERSION);
 
@@ -659,7 +655,7 @@ void Draw_Init (void)
 
 //	draw_disc = Draw_PicFromWad ("disc");
 //	draw_backtile = Draw_PicFromWad ("backtile");
-	draw_backtile = 0;// Draw_PicFromFile("gfx/menu/backtile.lmp");
+	draw_backtile = Draw_PicFromFile("gfx/menu/backtile.lmp");
 	//waitforitgl("drawinit complete");
 }
 

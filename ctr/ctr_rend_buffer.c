@@ -1,7 +1,7 @@
 #include "ctr_rend.h"
 #include <stdlib.h>
 #ifdef _3DS
-#include <3ds/linear.h>
+#include <3ds/allocator/linear.h>
 #endif
 
 #define CTR_REND_BUFFER_ALIGN_SIZE 16

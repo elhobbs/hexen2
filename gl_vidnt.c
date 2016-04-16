@@ -490,6 +490,9 @@ UNMAPBUFFERFUNCPTR glUnmapBuffer;
 GENVERTEXARRAYSFUNCPTR glGenVertexArrays;
 BINDVERTEXARRAYFUNCPTR glBindVertexArray;
 DELETEVERTEXARRAYSFUNCPTR glDeleteVertexArrays;
+//PFNGLACTIVETEXTUREPROC glActiveTexture;
+
+void glActiveTexture(GLenum texture) {}
 
 
 #define TEXTURE_EXT_STRING "GL_EXT_texture_object"
@@ -603,7 +606,7 @@ void CheckTextureExtensions (void)
 		tmp++;
 	}
 
-	if (!texture_ext || COM_CheckParm ("-gl11") )
+	if (0) //!texture_ext || COM_CheckParm ("-gl11") )
 	{
 		hInstGL = LoadLibrary("opengl32.dll");
 		
@@ -630,11 +633,13 @@ void CheckTextureExtensions (void)
 	glBindVertexArray = (BINDVERTEXARRAYFUNCPTR)wglGetProcAddress((LPCSTR) "glBindVertexArray");
 	glDeleteVertexArrays = (DELETEVERTEXARRAYSFUNCPTR)wglGetProcAddress((LPCSTR) "glDeleteVertexArrays");
 
-/* load library and get procedure adresses for texture extension API */
+	//glActiveTexture = (PFNGLACTIVETEXTUREPROC)wglGetProcAddress((LPCSTR) "glActiveTextureARB");
+
+	/* load library and get procedure adresses for texture extension API */
 	if ((bindTexFunc = (BINDTEXFUNCPTR)
 		wglGetProcAddress((LPCSTR) "glBindTextureEXT")) == NULL)
 	{
-		Sys_Error ("GetProcAddress for BindTextureEXT failed");
+		//Sys_Error ("GetProcAddress for BindTextureEXT failed");
 		return;
 	}
 }
